@@ -187,7 +187,7 @@
                     <ul>
                         <li>Lógica condicional com várias regras</li>
                         <li>Temas, fontes, logotipo e imagem de capa</li>
-                        <li>Oito modelos prontos para começar</li>
+                        <li>{{ count($templates) }} modelos prontos para começar, além do formulário em branco</li>
                     </ul>
                 </div>
                 <div class="shot"><img src="{{ asset('img/landing/builder.jpg') }}" alt="Construtor de formulários com lista de perguntas e painel de propriedades" loading="lazy" width="1440" height="900"></div>
