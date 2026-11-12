@@ -85,7 +85,7 @@
                 @elseif (count($item['samples']))
                     <p class="is-size-8 has-text-muted has-text-weight-bold mb-2">Respostas recentes</p>
                     @foreach ($item['samples'] as $sm)
-                        <div class="py-2" style="border-bottom:1px solid var(--fp-border)">
+                        <div class="py-2" style="border-bottom:1px solid var(--tf-line)">
                             <span class="is-size-7">{{ $sm['text'] }}</span>
                             <span class="is-size-8 has-text-muted ml-2">{{ $sm['at']->locale('pt_BR')->diffForHumans() }}</span>
                         </div>

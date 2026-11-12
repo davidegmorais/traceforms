@@ -48,7 +48,7 @@
             <div x-show="tab === 'qr'" x-cloak class="has-text-centered">
                 <p class="is-size-7 mb-3">Para materiais impressos e eventos. Já inclui <span class="mono">utm_medium=qr</span> para você medir o offline.</p>
                 @php $qrUrl = $form->publicUrl(['utm_source' => 'qrcode', 'utm_medium' => 'qr']); @endphp
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data={{ urlencode($qrUrl) }}" alt="QR Code" width="240" height="240" style="border-radius:12px;border:1px solid var(--fp-border)">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data={{ urlencode($qrUrl) }}" alt="QR Code" width="240" height="240" style="border-radius:12px;border:1px solid var(--tf-line)">
                 <p class="mt-2"><a href="https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&format=png&data={{ urlencode($qrUrl) }}" target="_blank" class="button is-small"><i class="fa-solid fa-download mr-2"></i> Baixar em alta resolução</a></p>
             </div>
         </div>

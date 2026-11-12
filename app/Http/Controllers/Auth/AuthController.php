@@ -3,117 +3,126 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Account;
-use App\Models\Invitation;
-use App\Models\User;
+use App\Services\TraceId\TraceIdClient;
+use App\Services\TraceId\TraceIdException;
+use App\Services\TraceId\TraceIdSync;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
+/**
+ * Login exclusivamente pelo Trace ID (OpenID Connect, código de autorização + PKCE).
+ */
 class AuthController extends Controller
 {
+    public function __construct(private TraceIdClient $trace) {}
+
+    /** Tela de entrar: um botão. Mostra mensagens de erro vindas do retorno. */
     public function showLogin()
     {
-        return view('auth.login');
+        return view('auth.login', ['configured' => $this->trace->configured()]);
     }
 
-    public function login(Request $request)
+    /** Envia a pessoa ao Trace ID. ?account=UUID pede uma empresa específica (troca de empresa). */
+    public function redirect(Request $request)
     {
-        $cred = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ], ['required' => 'Campo obrigatório.', 'email' => 'E-mail inválido.']);
-
-        if (! Auth::attempt($cred, $request->boolean('remember'))) {
-            return back()->withErrors(['email' => 'E-mail ou senha incorretos.'])->onlyInput('email');
+        if (! $this->trace->configured()) {
+            return redirect()->route('login');
         }
 
-        if ($request->user()->isSuspended()) {
-            Auth::logout();
+        $state = Str::random(40);
+        $nonce = Str::random(40);
+        $verifier = Str::random(64);
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
 
-            return back()->withErrors(['email' => 'Seu acesso foi suspenso. Fale com o suporte.'])->onlyInput('email');
-        }
-
-        $request->session()->regenerate();
-        $request->user()->forceFill(['last_login_at' => now()])->save();
-
-        return redirect()->intended(route('dashboard'));
-    }
-
-    public function showRegister(Request $request)
-    {
-        $invitation = $request->query('invite') ? Invitation::with('account')->where('token', $request->query('invite'))->first() : null;
-        $invitation = $invitation?->isPending() ? $invitation : null;
-
-        if (! $invitation && ! config('traceforms.registration_open')) {
-            return redirect()->route('login')->with('status', 'O cadastro está fechado. Peça acesso ao administrador ou use o link do convite que você recebeu.');
-        }
-
-        return view('auth.register', ['invitation' => $invitation]);
-    }
-
-    public function register(Request $request)
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
-            'company' => ['nullable', 'string', 'max:120'],
-            'invite' => ['nullable', 'string'],
-        ], [
-            'required' => 'Campo obrigatório.',
-            'email.unique' => 'Já existe uma conta com este e-mail.',
-            'password.confirmed' => 'As senhas não conferem.',
-            'password.min' => 'A senha precisa ter pelo menos 8 caracteres.',
-            'password.letters' => 'A senha precisa conter letras.',
-            'password.numbers' => 'A senha precisa conter números.',
+        $request->session()->put('traceid.flow', [
+            'state' => $state,
+            'nonce' => $nonce,
+            'verifier' => $verifier,
+            'intended' => $request->session()->get('url.intended'),
+            'at' => time(),
         ]);
 
-        // Com o cadastro fechado, só passa quem tem um convite válido para este e-mail.
-        if (! config('traceforms.registration_open')) {
-            $invite = ! empty($data['invite'])
-                ? Invitation::where('token', $data['invite'])->whereNull('accepted_at')->where('expires_at', '>', now())->first()
-                : null;
-            if (! $invite || strtolower($invite->email) !== strtolower($data['email'])) {
-                return redirect()->route('login')->with('status', 'O cadastro está fechado. Peça acesso ao administrador ou use o link do convite que você recebeu.');
-            }
-        }
+        $account = $request->query('account');
+        $extra = [
+            'account_hint' => is_string($account) && Str::isUuid($account) ? $account : null,
+            'prompt' => in_array($request->query('prompt'), ['login', 'select_account'], true) ? $request->query('prompt') : null,
+        ];
 
-        $user = DB::transaction(function () use ($data) {
-            $user = User::create([
-                'name' => $data['name'],
-                'email' => strtolower($data['email']),
-                'password' => $data['password'],
-            ]);
-
-            $invitation = ! empty($data['invite'])
-                ? Invitation::where('token', $data['invite'])->whereNull('accepted_at')->where('expires_at', '>', now())->first()
-                : null;
-
-            if ($invitation && strtolower($invitation->email) === $user->email) {
-                $invitation->account->users()->attach($user->id, ['role' => $invitation->role->value]);
-                $invitation->update(['accepted_at' => now()]);
-                $user->forceFill(['current_account_id' => $invitation->account_id])->save();
-            } else {
-                Account::createFor($user, $data['company'] ?: 'Conta de '.explode(' ', $user->name)[0]);
-            }
-
-            return $user;
-        });
-
-        Auth::login($user, true);
-        $request->session()->regenerate();
-
-        return redirect()->route('dashboard')->with('success', 'Bem-vindo ao TraceForms! Crie seu primeiro formulário.');
+        return redirect()->away($this->trace->authorizeUrl($state, $nonce, $challenge, $extra));
     }
 
+    public function callback(Request $request, TraceIdSync $sync)
+    {
+        $flow = $request->session()->pull('traceid.flow');
+
+        if ($request->filled('error')) {
+            $msg = match ($request->query('error')) {
+                'access_denied' => 'O acesso foi negado no Trace ID.',
+                'login_required', 'interaction_required' => 'Entre no Trace ID para continuar.',
+                default => 'O Trace ID não concluiu o login: '.Str::limit((string) ($request->query('error_description') ?: $request->query('error')), 160),
+            };
+
+            return redirect()->route('login')->withErrors(['trace' => $msg]);
+        }
+
+        if (! $flow || ! hash_equals($flow['state'], (string) $request->query('state')) || time() - $flow['at'] > 900) {
+            return redirect()->route('login')->withErrors(['trace' => 'O login expirou ou veio de outra janela. Tente de novo.']);
+        }
+        if ($request->filled('iss') && rtrim($request->query('iss'), '/') !== $this->trace->issuer()) {
+            return redirect()->route('login')->withErrors(['trace' => 'Resposta de um emissor desconhecido. Tente de novo.']);
+        }
+
+        try {
+            $tokens = $this->trace->exchangeCode((string) $request->query('code'), $flow['verifier']);
+            if (empty($tokens['id_token'])) {
+                throw new TraceIdException('O Trace ID não devolveu a identificação da pessoa (escopo openid).');
+            }
+            $claims = $this->trace->verifyIdToken($tokens['id_token'], $flow['nonce']);
+            [$user, $account] = $sync->fromClaims($claims);
+        } catch (TraceIdException $e) {
+            Log::warning('Trace ID: login recusado', ['motivo' => $e->getMessage(), 'codigo' => $e->reason]);
+
+            return redirect()->route('login')->withErrors(['trace' => $e->getMessage()]);
+        }
+
+        // Ao trocar de empresa, a sessão anterior no Trace ID deixa de ser usada.
+        if ($old = $request->session()->get('traceid.refresh_token')) {
+            $this->trace->revoke($old);
+        }
+
+        Auth::login($user);
+        $request->session()->regenerate();
+        $request->session()->put('traceid', [
+            'sub' => $claims['sub'],
+            'account_id' => $account->id,
+            'access_token' => $tokens['access_token'],
+            'refresh_token' => $tokens['refresh_token'] ?? null,
+            'id_token' => $tokens['id_token'],
+            'expires_at' => time() + (int) ($tokens['expires_in'] ?? 3600),
+            'checked_at' => time(),
+        ]);
+
+        return redirect()->to($flow['intended'] ?: route('dashboard'));
+    }
+
+    /** Sai do TraceForms e encerra a sessão no Trace ID. */
     public function logout(Request $request)
     {
+        $s = $request->session()->get('traceid', []);
+        if (! empty($s['refresh_token'])) {
+            $this->trace->revoke($s['refresh_token']);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        if (! $this->trace->configured()) {
+            return redirect()->route('home');
+        }
+
+        return redirect()->away($this->trace->logoutUrl($s['id_token'] ?? null, route('home')));
     }
 }

@@ -25,7 +25,7 @@
                 <li>Campanha, anúncio e página de origem de cada pessoa, inclusive em formulários incorporados no seu site</li>
                 <li>Dispositivo, navegador, localização e o caminho até responder</li>
                 <li>Em qual pergunta as pessoas desistem e quanto tempo levam em cada uma</li>
-                <li>Equipes com cinco níveis de acesso e histórico de alterações</li>
+                <li>Acesso da equipe pelo Trace ID, com níveis e histórico de alterações</li>
             </ul>
         </div>
         <p class="is-size-7" style="opacity:.7">© {{ date('Y') }} TraceForms</p>

@@ -3,7 +3,8 @@
 namespace App\Enums;
 
 /**
- * Níveis de acesso por conta (workspace).
+ * Níveis de acesso por conta (workspace). Vêm do nível da pessoa no Trace ID
+ * (veja config/traceid.php). "Proprietário" só existe em dados anteriores ao Trace ID.
  *
  * Hierarquia: owner > admin > editor > analyst > viewer.
  * Cada papel herda tudo do papel abaixo e acrescenta permissões.
@@ -28,11 +29,9 @@ enum Role: string
         'forms.publish'     => self::Editor,
         'links.manage'      => self::Editor,
         'forms.delete'      => self::Admin,
-        'members.manage'    => self::Admin,
+        'members.manage'    => self::Admin,  // restringir membros a formulários
         'account.settings'  => self::Admin,
         'audit.view'        => self::Admin,
-        'account.delete'    => self::Owner,
-        'account.transfer'  => self::Owner,
     ];
 
     public const ABILITY_LABELS = [
@@ -45,11 +44,9 @@ enum Role: string
         'forms.publish'    => 'Publicar / encerrar formulários',
         'links.manage'     => 'Criar links rastreados (UTM)',
         'forms.delete'     => 'Excluir formulários',
-        'members.manage'   => 'Convidar e gerenciar membros',
-        'account.settings' => 'Alterar configurações da conta',
+        'members.manage'   => 'Restringir membros a formulários',
+        'account.settings' => 'Alterar configurações da empresa',
         'audit.view'       => 'Ver log de auditoria',
-        'account.delete'   => 'Excluir a conta',
-        'account.transfer' => 'Transferir a propriedade',
     ];
 
     public function level(): int
@@ -77,8 +74,8 @@ enum Role: string
     public function description(): string
     {
         return match ($this) {
-            self::Owner => 'Controle total, incluindo excluir a conta e transferir a propriedade.',
-            self::Admin => 'Gerencia membros, configurações e todos os formulários.',
+            self::Owner => 'Controle total (papel anterior ao Trace ID).',
+            self::Admin => 'Configurações da empresa, todos os formulários e restrições da equipe.',
             self::Editor => 'Cria, edita e publica formulários; gerencia respostas.',
             self::Analyst => 'Acessa relatórios e respostas completas, e exporta dados. Não edita.',
             self::Viewer => 'Vê apenas painéis agregados — sem acesso a dados pessoais.',

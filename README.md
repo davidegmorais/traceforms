@@ -4,6 +4,8 @@ Plataforma de formulários, pesquisas e inscrições em **Laravel 12**, **Bulma 
 
 O diferencial é a **coleta de dados**: cada resposta chega com a campanha, o anúncio, a página de origem, o dispositivo, a localização e o caminho que a pessoa percorreu. Os relatórios mostram o que converte e em qual pergunta as pessoas desistem.
 
+O login é feito pelo **Trace ID**, o mesmo das outras plataformas Tracezap. Quem entra, em qual empresa e com qual nível é definido lá.
+
 ---
 
 ## Sumário
@@ -14,7 +16,7 @@ O diferencial é a **coleta de dados**: cada resposta chega com a campanha, o an
 4. [Atualizar para uma versão nova](#atualizar-para-uma-versão-nova)
 5. [Funcionalidades](#funcionalidades)
 6. [Níveis de acesso](#níveis-de-acesso)
-7. [Administração da plataforma](#administração-da-plataforma) — inclui [cadastro aberto ou fechado](#cadastro-aberto-ou-fechado) e [como se tornar administrador geral](#como-se-tornar-administrador-geral)
+7. [Login pelo Trace ID](#login-pelo-trace-id), incluindo a [migração dos usuários que já existiam](#migração-dos-usuários-que-já-existiam)
 8. [Integrações](#integrações)
 9. [Colocar em produção](#colocar-em-produção)
 10. [Arquitetura](#arquitetura)
@@ -80,7 +82,12 @@ DB_PORT=3306
 DB_DATABASE=traceforms
 DB_USERNAME=traceforms
 DB_PASSWORD=TroqueEstaSenha123!
+
+TRACEID_CLIENT_ID=id-da-plataforma-no-trace-id
+TRACEID_CLIENT_SECRET=segredo-da-plataforma
 ```
+
+Os dados do Trace ID vêm do cadastro do TraceForms como plataforma no Trace ID. Veja [Login pelo Trace ID](#login-pelo-trace-id).
 
 No `.env.example`, as linhas `DB_HOST` … `DB_PASSWORD` vêm comentadas com `#`. Tire o `#` delas.
 
@@ -99,23 +106,13 @@ Abra `http://localhost:8000`.
 
 ## Primeiro acesso
 
-O `--seed` cria uma empresa de demonstração ("Acme Marketing") com cerca de 9 mil visitas e 3 mil respostas em 90 dias, além de uma segunda empresa ("Cliente Beta"). Todas as contas usam a senha **`traceforms123`**:
+1. Cadastre o TraceForms como plataforma no Trace ID e preencha `TRACEID_CLIENT_ID` e `TRACEID_CLIENT_SECRET` no `.env` (veja [Configurar](#configurar)).
+2. No Trace ID, dê à sua pessoa acesso ao TraceForms com o nível **admin** na sua empresa.
+3. Abra o TraceForms e clique em **Entrar com Trace ID**.
 
-| E-mail | Papel | Para testar |
-|---|---|---|
-| `demo@traceforms.test` | Proprietário + administrador da plataforma | Tudo, inclusive `/admin` |
-| `admin@traceforms.test` | Administrador | Gestão de equipe; participa de duas empresas |
-| `editor@traceforms.test` | Editor | Cria e edita formulários |
-| `analista@traceforms.test` | Analista | Vê e exporta respostas, sem editar |
-| `leitor@traceforms.test` | Leitor | Só painéis, restrito a um formulário |
+No primeiro login, a empresa é criada no TraceForms com o nome que ela tem no Trace ID, e você entra como Administrador. As outras pessoas aparecem depois do primeiro login de cada uma.
 
-Sem o `--seed`, crie sua conta de administrador pelo terminal. O comando pergunta nome, empresa e senha:
-
-```bash
-php artisan traceforms:make-admin seu@email.com
-```
-
-O cadastro público em `/register` vem **fechado**. Os outros usuários são criados por você em *Administração → Usuários → Novo usuário* ou entram por convite de uma empresa. Veja [Cadastro aberto ou fechado](#cadastro-aberto-ou-fechado).
+O `--seed` cria dados de demonstração ("Acme Marketing", com cerca de 9 mil visitas e 3 mil respostas, e "Cliente Beta"), com pessoas de e-mail `@traceforms.test`. Para usar esses dados localmente, dê acesso no Trace ID a uma pessoa com um desses e-mails, ou ligue a empresa de demonstração à sua conta com `traceforms:trace-link`.
 
 ---
 
@@ -211,88 +208,107 @@ O menu pode ser recolhido para mostrar só os ícones (botão *Recolher menu*, n
 
 ### Perfil
 
-Foto (cortada em quadrado), nome, e-mail, troca de senha e lista de dispositivos conectados, com a opção de sair de todos os outros.
+Foto (cortada em quadrado), empresas em que a pessoa tem acesso, com troca rápida entre elas, e dispositivos conectados, com a opção de sair de todos os outros. Nome, e-mail e senha são os do Trace ID e são alterados lá.
 
 ---
 
 ## Níveis de acesso
 
-Uma pessoa pode participar de várias **empresas (contas)**, com um papel diferente em cada uma.
+Uma pessoa pode ter acesso a várias **empresas**, com um nível diferente em cada uma. O nível vem do Trace ID e é traduzido assim:
 
-| Permissão | Leitor | Analista | Editor | Administrador | Proprietário |
-|---|:-:|:-:|:-:|:-:|:-:|
-| Ver painéis e relatórios | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Ver respostas individuais e exportar CSV | | ✓ | ✓ | ✓ | ✓ |
-| Criar, editar e publicar formulários; gerenciar respostas e links | | | ✓ | ✓ | ✓ |
-| Excluir formulários, gerenciar equipe e configurações, ver auditoria | | | | ✓ | ✓ |
-| Excluir a conta e transferir a propriedade | | | | | ✓ |
+| Nível no Trace ID | Papel no TraceForms |
+|---|---|
+| admin | Administrador |
+| gestor | Editor |
+| usuario | Analista |
+| cliente | Leitor |
 
-- Leitor, Analista e Editor podem ser **restritos a formulários específicos** — útil para agências darem acesso a clientes.
-- Ninguém altera alguém do mesmo nível ou acima; só o Proprietário nomeia Administradores.
-- Convites por e-mail (válidos por 7 dias) e histórico de alterações (auditoria).
+A tradução pode ser mudada no `.env` com `TRACEID_LEVEL_ADMIN`, `TRACEID_LEVEL_GESTOR`, `TRACEID_LEVEL_USUARIO` e `TRACEID_LEVEL_CLIENTE` (valores: `admin`, `editor`, `analyst`, `viewer`).
+
+| Permissão | Leitor | Analista | Editor | Administrador |
+|---|:-:|:-:|:-:|:-:|
+| Ver painéis e relatórios | ✓ | ✓ | ✓ | ✓ |
+| Ver respostas individuais e exportar CSV | | ✓ | ✓ | ✓ |
+| Criar, editar e publicar formulários; gerenciar respostas e links | | | ✓ | ✓ |
+| Excluir formulários, configurações da empresa, auditoria, restringir membros a formulários | | | | ✓ |
+
+- Leitor, Analista e Editor podem ser **restritos a formulários específicos** na tela *Equipe*, o que é útil para agências darem acesso a clientes.
+- Quem entra, quem sai e o nível de cada pessoa é definido no Trace ID. A tela *Equipe* do TraceForms mostra quem tem acesso e permite só a restrição por formulário.
+- As alterações importantes ficam no histórico (auditoria).
 
 ---
 
-## Administração da plataforma
+## Login pelo Trace ID
 
-Área separada em **`/admin`**, com visual próprio (barra escura), para quem administra o TraceForms como um todo. Não tem relação com o papel "Administrador" dentro de uma empresa.
+O TraceForms não tem cadastro, senha nem painel de administração próprios. Tudo isso fica no Trace ID:
 
-- **Acesso:** item **Administração** na barra lateral (seção "Plataforma"), que só aparece para administradores da plataforma, ou direto em `/admin`
-- **Visão geral:** empresas, usuários, formulários publicados, respostas e espaço usado por arquivos, com gráfico de 30 dias
-- **Empresas:** membros (alterar papel, adicionar, remover), trocar proprietário, suspender com motivo, reativar e excluir com todos os dados
-- **Usuários:** criar usuários (veja abaixo), editar nome e e-mail, definir nova senha (encerra as sessões abertas), dar ou tirar acesso de administrador, suspender, excluir e **acessar como** a pessoa para dar suporte (com aviso fixo na tela e registro no histórico)
-- **Suspensões:** um usuário suspenso não consegue entrar; uma empresa suspensa bloqueia os membros e para de aceitar respostas, sem apagar dados
+- **Entrar:** a tela de login tem só o botão *Entrar com Trace ID*. O login segue o OpenID Connect (código de autorização com PKCE), e a assinatura do token é conferida com as chaves públicas do Trace ID.
+- **Pessoa:** cada pessoa fica ligada ao identificador permanente dela no Trace ID. Nome e e-mail são atualizados a cada login.
+- **Empresa:** cada empresa fica ligada ao identificador da conta no Trace ID. O nome e os recursos do plano vêm de lá.
+- **Nível:** vem do Trace ID e é conferido de novo a cada 5 minutos (`TRACEID_RECHECK_SECONDS`). Se o nível mudar lá, muda aqui sem novo login. Se o acesso for suspenso ou removido, a pessoa sai do TraceForms.
+- **Trocar de empresa:** pelo seletor no topo do menu. A troca passa rapidamente pelo Trace ID, que confirma o acesso àquela empresa.
+- **Sair:** encerra a sessão no TraceForms e no Trace ID.
+- **Licença:** o comando agendado `traceforms:trace-sync` confere as licenças a cada hora. Empresa com licença inativa ou vencida fica suspensa: ninguém entra e os formulários param de aceitar respostas, mas nada é apagado. Quando a licença volta, a empresa é reativada sozinha.
+- **Trace ID fora do ar:** quem já está dentro continua usando normalmente, e a conferência é tentada de novo a cada minuto. Só novos logins dependem do Trace ID.
 
-### Cadastro aberto ou fechado
+### Configurar
 
-Por padrão o cadastro público está **fechado**: `/register` leva para a tela de entrar com um aviso, e a página inicial mostra só o botão *Entrar*. Novas pessoas entram de duas formas:
+**1. Cadastre o TraceForms como plataforma no Trace ID** com:
 
-- **Criadas pela Administração:** em *Administração → Usuários → Novo usuário*, preencha nome e e-mail e escolha entre criar uma empresa nova (a pessoa vira proprietária) ou adicionar a uma empresa existente com um papel. Se a senha ficar em branco, uma é gerada e mostrada **uma única vez**, com botão de copiar, para você enviar à pessoa.
-- **Convite de uma empresa:** quem tem um convite válido consegue se cadastrar pelo link do convite, com o e-mail convidado, mesmo com o cadastro fechado.
+| Campo | Valor |
+|---|---|
+| URL de retorno | `https://seu-dominio/auth/trace/callback` |
+| URL depois de sair | `https://seu-dominio/` |
+| Escopos do login | `openid profile email offline_access` |
+| Escopos da API | `members:read members:write` |
 
-Para abrir o cadastro a qualquer pessoa, coloque no `.env` e limpe o cache de configuração:
+Para testar na sua máquina, cadastre também `http://127.0.0.1:8000/auth/trace/callback` e `http://127.0.0.1:8000/`.
+
+**2. Preencha o `.env`:**
 
 ```env
-TRACEFORMS_REGISTRATION_OPEN=true
-```
-```bash
-php artisan config:cache
-```
-
-### Como se tornar administrador geral
-
-O administrador geral (administrador da plataforma) é quem vê a aba **Administração** e acessa `/admin`. É uma marcação no cadastro do usuário, independente do papel dentro das empresas.
-
-**1. Crie o usuário e dê o acesso pelo terminal (recomendado)**, na pasta do projeto:
-
-```bash
-php artisan traceforms:make-admin seu@email.com
+TRACEID_CLIENT_ID=id-da-plataforma
+TRACEID_CLIENT_SECRET=segredo-da-plataforma
+# Opcionais
+TRACEID_ISSUER=https://id.tracezap.com.br
+TRACEID_RECHECK_SECONDS=300
+TRACEID_PROFILE_URL=https://id.tracezap.com.br
 ```
 
-Se ainda não existir usuário com esse e-mail, o comando pergunta nome, nome da empresa e senha, e cria tudo. Se já existir, só dá o acesso. A resposta é `Fulano agora é administrador da plataforma. Entre e acesse /admin.`
+**3. Rode** `php artisan config:cache`.
 
-Para remover o acesso:
+### Migração dos usuários que já existiam
+
+Nada é apagado: formulários, respostas, relatórios e restrições por formulário continuam onde estão.
+
+**1. Veja a situação atual.** O comando lista as empresas do TraceForms e as contas com licença do TraceForms no Trace ID:
 
 ```bash
-php artisan traceforms:make-admin seu@email.com --remove
+php artisan traceforms:trace-status
 ```
 
-**2. Outras formas de dar o acesso** a um usuário que já existe:
+**2. Ligue cada empresa à conta correspondente do Trace ID:**
 
-- **Por outro administrador geral:** em *Administração → Usuários*, abra a pessoa (ou crie em *Novo usuário*), marque *Administrador da plataforma (acesso a /admin)* e clique em *Salvar*.
+```bash
+php artisan traceforms:trace-link 1 aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+```
 
-- **Direto no banco** (se não tiver acesso ao terminal da aplicação):
-  ```sql
-  UPDATE users SET is_super_admin = 1 WHERE email = 'seu@email.com';
-  ```
+O primeiro número é o ID da empresa no TraceForms; o segundo, o UUID da conta no Trace ID (os dois aparecem no passo 1). Para desfazer, use `--unlink`.
 
-**3. Entre de novo** (ou recarregue a página). A seção **Plataforma → Administração** aparece na barra lateral.
+Se pular este passo, a ligação é feita no primeiro login quando a pessoa é **admin** no Trace ID e é dona ou administradora de **uma única** empresa ainda não ligada. Em qualquer outro caso, uma empresa nova e vazia é criada. Por isso, ligue as empresas antes de avisar a equipe.
 
-Observações:
+**3. Crie no Trace ID os acessos de quem já usava o TraceForms.** Rode primeiro a simulação, que não grava nada:
 
-- Nos dados de demonstração (`--seed`), `demo@traceforms.test` já é administrador geral.
-- Ninguém consegue remover o próprio acesso pelo painel, para não ficar sem nenhum administrador. Use o comando com `--remove`, se precisar.
-- Enquanto um administrador estiver usando **Acessar como**, a área `/admin` fica bloqueada até ele clicar em *Voltar para minha conta*.
+```bash
+php artisan traceforms:trace-push 1 --dry-run
+php artisan traceforms:trace-push 1
+```
+
+Cada membro recebe o nível equivalente ao papel atual (o antigo Proprietário vira admin). Quem já tem conta no Trace ID mantém a senha. Para quem não tinha, o Trace ID gera uma senha, que aparece **uma única vez** no terminal para você enviar à pessoa. Rodar de novo não duplica nada; quem já tem acesso aparece como "Já tem acesso". Se o plano tiver limite de pessoas por nível, quem passar do limite aparece como "Falhou" e precisa ser ajustado no Trace ID.
+
+**4. Avise a equipe.** No primeiro login, cada pessoa é reconhecida pelo e-mail e fica ligada ao Trace ID. Sessões abertas antes da migração são encerradas e pedem um novo login.
+
+**5. Confira** com `traceforms:trace-status`: a coluna "Já entraram pelo Trace ID" mostra quem já fez o primeiro login.
 
 ---
 
@@ -336,13 +352,13 @@ Funciona com Zapier, Make, n8n ou o seu CRM.
 
 ## Colocar em produção
 
-1. **`.env`:** defina `APP_ENV=production`, `APP_DEBUG=false` e `APP_URL=https://seu-dominio`, além do e-mail (`MAIL_*`). O cadastro público fica fechado a menos que você defina `TRACEFORMS_REGISTRATION_OPEN=true`.
+1. **`.env`:** defina `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://seu-dominio`, o e-mail (`MAIL_*`) e o Trace ID (`TRACEID_CLIENT_ID` e `TRACEID_CLIENT_SECRET`).
 2. **Permissões:**
    ```bash
    sudo chown -R www-data:www-data storage bootstrap/cache
    php artisan optimize
    ```
-3. **Agendador** (retenção de dados e limpeza de arquivos de quem desistiu). No `crontab -e` do usuário do servidor:
+3. **Agendador** (retenção de dados, limpeza de arquivos de quem desistiu e conferência das licenças no Trace ID). No `crontab -e` do usuário do servidor:
    ```
    * * * * * cd /caminho/TraceForms && php artisan schedule:run >> /dev/null 2>&1
    ```
@@ -375,16 +391,19 @@ Funciona com Zapier, Make, n8n ou o seu CRM.
 ```
 app/
   Enums/Role.php                        Papéis e matriz de permissões (cada habilidade vira um Gate)
-  Http/Middleware/SetCurrentAccount     Empresa ativa, papel do usuário, bloqueio de suspensos
-  Http/Middleware/EnsureSuperAdmin      Protege /admin
+  Http/Middleware/SetCurrentAccount     Empresa ativa da sessão e papel da pessoa
+  Http/Middleware/EnsureTraceSession    Renova o token e confere o acesso no Trace ID
   Http/Controllers/
     Public/PublicFormController         Página pública, coleta (/collect), envio, arquivos, links curtos
     FormController                      Formulários, construtor (JSON), configurações, publicação
     ReportController, CampaignController Relatórios
     SubmissionController                Respostas, parciais, arquivos, exportação CSV
-    ProfileController                   Perfil, foto, senha, dispositivos
-    Admin/                              Administração da plataforma
+    Auth/AuthController                 Login, retorno e saída pelo Trace ID
+    ProfileController                   Perfil, foto, empresas, dispositivos
+    MemberController                    Equipe (consulta e restrição por formulário)
+  Console/Commands/                     trace-status, trace-link, trace-push, trace-sync
   Services/
+    TraceId/                            TraceIdClient (OIDC, chaves, API), TraceIdSync (pessoa, empresa, nível)
     Tracking/                           SessionRecorder, DeviceParser, ChannelClassifier,
                                         TrafficParser, GeoResolver, IpPrivacy
     Reports/                            ReportService (agregações), ReportFilters
@@ -397,16 +416,19 @@ public/
   vendor/                               Bibliotecas e fontes servidas localmente
 resources/views/
   public/form.blade.php                 Os quatro formatos de formulário
-  layouts/app | admin | guest           Painel da conta, administração e telas de login
+  layouts/app | guest                   Painel e tela de login
 ```
 
-**Tabelas principais:** `accounts`, `account_user` (papel e restrição por formulário), `invitations`, `forms`, `form_fields`, `tracking_links`, `form_sessions` (uma por visita, com todo o rastreamento), `submissions`, `uploads`, `audit_logs`.
+**Tabelas principais:** `users` (com `trace_id`), `accounts` (com `trace_account_id` e os recursos do plano), `account_user` (papel e restrição por formulário), `forms`, `form_fields`, `tracking_links`, `form_sessions` (uma por visita, com todo o rastreamento), `submissions`, `uploads`, `audit_logs`.
 
 **Comandos:**
 
 | Comando | O que faz |
 |---|---|
-| `php artisan traceforms:make-admin email` | Dá (ou remove, com `--remove`) acesso a `/admin` |
+| `php artisan traceforms:trace-status` | Mostra empresas ligadas e não ligadas ao Trace ID e as contas licenciadas lá |
+| `php artisan traceforms:trace-link ID UUID` | Liga uma empresa a uma conta do Trace ID (`--unlink` desfaz) |
+| `php artisan traceforms:trace-push ID` | Cria no Trace ID os acessos dos membros atuais (`--dry-run` só simula) |
+| `php artisan traceforms:trace-sync` | Atualiza licença, nome e recursos das empresas (roda a cada hora pelo agendador) |
 | `php artisan traceforms:prune` | Aplica a retenção de visitas de cada empresa e apaga arquivos de quem não enviou (roda todo dia pelo agendador) |
 
 ---
@@ -422,7 +444,13 @@ resources/views/
 | Upload falha com arquivo grande | Aumente `upload_max_filesize` e `post_max_size` no PHP e `client_max_body_size` no Nginx. |
 | Foto de perfil não é cortada | Instale o GD: `sudo apt install php-gd`. |
 | Layout antigo depois de atualizar | Rode `php artisan optimize:clear` e recarregue com `Ctrl+Shift+R`. |
-| Qualquer outro erro | Veja a mensagem em `storage/logs/laravel.log`. |
+| "O login pelo Trace ID ainda não foi configurado" | Preencha `TRACEID_CLIENT_ID` e `TRACEID_CLIENT_SECRET` no `.env` e rode `php artisan config:cache`. |
+| O Trace ID mostra página de erro ao clicar em entrar | A URL de retorno cadastrada no Trace ID precisa ser exatamente `APP_URL` + `/auth/trace/callback`, inclusive `https` e sem barra no fim do `APP_URL`. |
+| "O TraceForms não foi reconhecido pelo Trace ID" | ID ou segredo da plataforma errados no `.env`. |
+| A pessoa entrou numa empresa nova e vazia | A empresa antiga não estava ligada. Ligue com `traceforms:trace-link` e peça para a pessoa sair e entrar de novo. A empresa vazia pode ficar sem uso. |
+| "Este e-mail já está ligado a outra identidade do Trace ID" | Existem duas pessoas no Trace ID com o mesmo e-mail em momentos diferentes. Corrija no Trace ID ou limpe o `trace_id` do usuário antigo no banco. |
+| `traceforms:trace-status` não lista as contas | A plataforma precisa dos escopos `members:read` e `members:write` para a API no Trace ID. |
+| Qualquer outro erro | Veja a mensagem em `storage/logs/laravel.log`. Recusas de login aparecem como "Trace ID: login recusado". |
 
 ---
 

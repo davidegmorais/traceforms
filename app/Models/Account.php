@@ -18,7 +18,7 @@ class Account extends Model
 
     protected function casts(): array
     {
-        return ['settings' => 'array', 'suspended_at' => 'datetime'];
+        return ['settings' => 'array', 'suspended_at' => 'datetime', 'trace_features' => 'array', 'trace_synced_at' => 'datetime'];
     }
 
     public function isSuspended(): bool
@@ -62,10 +62,6 @@ class Account extends Model
         return $this->hasMany(Form::class);
     }
 
-    public function invitations(): HasMany
-    {
-        return $this->hasMany(Invitation::class);
-    }
 
     public function sessions(): HasManyThrough
     {

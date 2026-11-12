@@ -36,61 +36,32 @@
         </section>
 
         {{-- Dados --}}
-        <form method="POST" action="{{ route('profile.update') }}" class="box">
-            @csrf @method('PUT')
+        <section class="box">
             <div class="box-title">Dados pessoais</div>
-            <div class="field">
-                <label class="label" for="name">Nome</label>
-                <input class="input @error('name') is-danger @enderror" id="name" name="name" value="{{ old('name', $user->name) }}" required autocomplete="name">
-                @error('name')<p class="help is-danger">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
-                <label class="label" for="email">E-mail</label>
-                <input class="input @error('email') is-danger @enderror" id="email" type="email" name="email" value="{{ old('email', $user->email) }}" required autocomplete="email">
-                @error('email')<p class="help is-danger">{{ $message }}</p>@enderror
-                <p class="help">É o e-mail que você usa para entrar e para receber convites.</p>
-            </div>
-            <button class="button is-primary">Salvar dados</button>
-        </form>
-
-        {{-- Senha --}}
-        <form method="POST" action="{{ route('profile.password') }}" class="box" x-data="{ show: false }">
-            @csrf @method('PUT')
-            <div class="box-title">Senha</div>
-            <div class="field">
-                <label class="label" for="current_password">Senha atual</label>
-                <input class="input @error('current_password') is-danger @enderror" id="current_password" :type="show ? 'text' : 'password'" name="current_password" required autocomplete="current-password">
-                @error('current_password')<p class="help is-danger">{{ $message }}</p>@enderror
-            </div>
-            <div class="columns mb-0">
-                <div class="column field mb-0">
-                    <label class="label" for="password">Nova senha</label>
-                    <input class="input @error('password') is-danger @enderror" id="password" :type="show ? 'text' : 'password'" name="password" required autocomplete="new-password">
-                </div>
-                <div class="column field">
-                    <label class="label" for="password_confirmation">Repita a nova senha</label>
-                    <input class="input" id="password_confirmation" :type="show ? 'text' : 'password'" name="password_confirmation" required autocomplete="new-password">
-                </div>
-            </div>
-            @error('password')<p class="help is-danger mb-2">{{ $message }}</p>@enderror
-            <p class="help mb-3">Pelo menos 8 caracteres, com letras e números.</p>
-            <label class="checkbox is-size-7 mr-4"><input type="checkbox" @change="show = $event.target.checked"> Mostrar senhas</label>
-            <label class="checkbox is-size-7"><input type="checkbox" name="logout_others" value="1" checked> Sair dos outros dispositivos</label>
-            <div class="mt-4"><button class="button is-primary">Alterar senha</button></div>
-        </form>
+            <dl class="kv mb-4">
+                <dt>Nome</dt><dd>{{ $user->name }}</dd>
+                <dt>E-mail</dt><dd>{{ $user->email }}</dd>
+            </dl>
+            <p class="is-size-7 has-text-muted mb-3">Nome, e-mail e senha são os do seu login no Trace ID e são atualizados aqui a cada entrada.</p>
+            <a href="{{ config('traceid.profile_url') }}" target="_blank" rel="noopener" class="button is-small">Alterar no Trace ID <i class="fa-solid fa-arrow-up-right-from-square ml-2 is-size-8"></i></a>
+        </section>
     </div>
 
     <div class="column is-5">
         <section class="box">
-            <div class="box-title">Suas contas</div>
+            <div class="box-title">Suas empresas</div>
             @foreach ($accounts as $acc)
                 <div class="is-flex is-align-items-center py-2" style="gap:.6rem;border-bottom:1px solid var(--tf-line)">
                     <span class="avatar is-small" style="background: {{ $acc->brand_color }}">{{ mb_strtoupper(mb_substr($acc->name, 0, 1)) }}</span>
                     <span style="flex:1">{{ $acc->name }}</span>
-                    <span class="tag {{ $acc->pivot->role->color() }}">{{ $acc->pivot->role->label() }}</span>
+                    @if ($acc->id === $account->id)
+                        <span class="tag {{ $acc->pivot->role->color() }}">{{ $acc->pivot->role->label() }}</span>
+                    @elseif ($acc->trace_account_id)
+                        <form method="POST" action="{{ route('accounts.switch', $acc) }}">@csrf<button class="button is-small">Entrar</button></form>
+                    @endif
                 </div>
             @endforeach
-            <a href="{{ route('accounts.create') }}" class="button is-small is-light is-fullwidth mt-3"><i class="fa-solid fa-plus mr-2"></i> Nova conta</a>
+            <p class="help mt-3">Outras empresas aparecem aqui depois do primeiro login nelas pelo Trace ID.</p>
         </section>
 
         @if ($sessions->count())
@@ -113,8 +84,8 @@
                     <button type="button" class="button is-small is-fullwidth mt-3" @click="open = true" x-show="!open">Sair dos outros dispositivos</button>
                     <form method="POST" action="{{ route('profile.logout-others') }}" x-show="open" x-cloak class="mt-3">
                         @csrf
-                        <div class="field"><label class="label is-small">Confirme sua senha</label><input type="password" class="input is-small" name="password" required autocomplete="current-password"></div>
-                        <button class="button is-small is-danger is-light">Sair dos outros dispositivos</button>
+                        <p class="is-size-7 mb-2">Os outros dispositivos vão precisar entrar de novo pelo Trace ID.</p>
+                        <button class="button is-small is-danger is-light">Confirmar</button>
                     </form>
                 @endif
             </section>

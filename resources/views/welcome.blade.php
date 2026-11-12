@@ -1,6 +1,6 @@
 @php
-    $signupOpen = (bool) config('traceforms.registration_open');
-    $signupUrl = $signupOpen ? route('register') : route('login');
+    $signupOpen = false; // entrada só pelo Trace ID
+    $signupUrl = route('login');
     $templates = \App\Support\FormTemplates::all();
     unset($templates['blank']);
     $types = \App\Support\FieldTypes::grouped();
@@ -222,7 +222,7 @@
                     ['RH e recrutamento', 'Candidaturas e pesquisas internas sem planilha.', ['Quais canais trazem mais candidaturas', 'Clima do time com grade de concordância', 'Prioridades do time por ranking'], ['Envio de currículo e assinatura', 'CPF validado e endereço pelo CEP', 'Acesso restrito por formulário para gestores']],
                     ['Eventos', 'Inscrições que fecham sozinhas.', ['Quais divulgações lotaram o evento', 'Horários em que as pessoas mais se inscrevem', 'Cidade e dispositivo dos inscritos'], ['Encerramento por data ou limite de vagas', 'QR Code já com UTM para materiais impressos', 'Uma inscrição por pessoa']],
                     ['Pesquisa e experiência do cliente', 'NPS, satisfação e pesquisas que as pessoas terminam.', ['NPS com promotores, neutros e detratores', 'Médias, medianas e distribuição por pergunta', 'Onde a pesquisa cansa quem responde'], ['Formatos “Uma por vez” e Chat', 'Matriz, ranking, escala e estrelas', 'Exportação em CSV pronta para o Excel']],
-                    ['Agências', 'Uma conta por cliente, com o acesso certo para cada pessoa.', ['Resultados de cada cliente separados', 'Campanhas comparadas entre formulários', 'Quem alterou o quê, e quando'], ['Várias contas no mesmo login', 'Cinco níveis de acesso e acesso por formulário', 'Histórico de alterações']],
+                    ['Agências', 'Uma conta por cliente, com o acesso certo para cada pessoa.', ['Resultados de cada cliente separados', 'Campanhas comparadas entre formulários', 'Quem alterou o quê, e quando'], ['Várias contas no mesmo login', 'Níveis de acesso pelo Trace ID e acesso por formulário', 'Histórico de alterações']],
                 ];
             @endphp
             <div class="cases">
@@ -308,7 +308,7 @@
                 <details><summary>Consigo mandar as respostas para o meu CRM?</summary>
                     <p>Sim, pelo webhook: cada resposta é enviada com todos os dados de rastreamento para o endereço que você configurar, inclusive Zapier, Make e n8n. Também é possível exportar tudo em CSV.</p></details>
                 <details><summary>Várias pessoas da equipe podem usar a mesma conta?</summary>
-                    <p>Sim. Há cinco níveis de acesso — de quem só vê os painéis até o proprietário — e é possível limitar uma pessoa a formulários específicos. Todas as alterações importantes ficam registradas no histórico.</p></details>
+                    <p>Sim. A equipe entra com o login do Trace ID, o mesmo das outras plataformas Tracezap, e cada pessoa tem um nível de acesso, de quem só vê os painéis até quem administra tudo. Também dá para limitar uma pessoa a formulários específicos, e as alterações importantes ficam registradas no histórico.</p></details>
             </div>
         </div>
     </section>

@@ -17,6 +17,8 @@ class User extends Authenticatable
 
     protected $fillable = ['name', 'email', 'password', 'current_account_id', 'locale', 'last_login_at', 'avatar_path'];
 
+    // trace_id (sub do Trace ID) é definido só pelo login (TraceIdSync), nunca por formulário.
+
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
@@ -25,7 +27,6 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'suspended_at' => 'datetime',
-            'is_super_admin' => 'boolean',
             'password' => 'hashed',
         ];
     }

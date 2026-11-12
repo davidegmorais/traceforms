@@ -32,7 +32,7 @@
         <div class="fp-account" x-data="{ menu: false }" @click.outside="menu = false">
             <div class="dropdown" :class="{ 'is-active': menu }">
                 <div class="dropdown-trigger">
-                    <button class="fp-account-btn" @click="menu = !menu" aria-haspopup="true" title="{{ $account->name }} — trocar de conta">
+                    <button class="fp-account-btn" @click="menu = !menu" aria-haspopup="true" title="{{ $account->name }}: trocar de empresa">
                         <span class="avatar is-small" style="background: {{ $account->brand_color }}">{{ mb_strtoupper(mb_substr($account->name, 0, 1)) }}</span>
                         <span class="lbl" style="flex:1;min-width:0"><span class="truncate has-text-weight-semibold">{{ $account->name }}</span><small>{{ $role->label() }}</small></span>
                         <i class="fa-solid fa-chevron-down is-size-8 lbl"></i>
@@ -40,18 +40,25 @@
                 </div>
                 <div class="dropdown-menu" role="menu">
                     <div class="dropdown-content">
-                        <p class="dropdown-item has-text-muted is-size-8 has-text-weight-bold">Suas contas</p>
+                        <p class="dropdown-item has-text-muted is-size-8 has-text-weight-bold">Suas empresas</p>
                         @foreach ($myAccounts as $acc)
-                            <form method="POST" action="{{ route('accounts.switch', $acc) }}">@csrf
-                                <button class="dropdown-item is-flex is-align-items-center" style="gap:.5rem;border:0;background:none;width:100%;cursor:pointer">
+                            @if ($acc->id === $account->id)
+                                <div class="dropdown-item is-flex is-align-items-center" style="gap:.5rem">
                                     <span class="avatar is-small" style="background: {{ $acc->brand_color }}">{{ mb_strtoupper(mb_substr($acc->name, 0, 1)) }}</span>
-                                    <span class="truncate" style="flex:1;text-align:left">{{ $acc->name }}</span>
-                                    @if ($acc->id === $account->id)<i class="fa-solid fa-check has-text-primary"></i>@endif
-                                </button>
-                            </form>
+                                    <span class="truncate" style="flex:1">{{ $acc->name }}</span>
+                                    <i class="fa-solid fa-check has-text-primary"></i>
+                                </div>
+                            @elseif ($acc->trace_account_id)
+                                <form method="POST" action="{{ route('accounts.switch', $acc) }}">@csrf
+                                    <button class="dropdown-item is-flex is-align-items-center" style="gap:.5rem;border:0;background:none;width:100%;cursor:pointer">
+                                        <span class="avatar is-small" style="background: {{ $acc->brand_color }}">{{ mb_strtoupper(mb_substr($acc->name, 0, 1)) }}</span>
+                                        <span class="truncate" style="flex:1;text-align:left">{{ $acc->name }}</span>
+                                    </button>
+                                </form>
+                            @endif
                         @endforeach
                         <hr class="dropdown-divider">
-                        <a href="{{ route('accounts.create') }}" class="dropdown-item"><i class="fa-solid fa-plus mr-2"></i> Nova conta</a>
+                        <a href="{{ route('auth.trace.redirect', ['prompt' => 'select_account']) }}" class="dropdown-item"><i class="fa-solid fa-right-left mr-2"></i> Escolher no Trace ID</a>
                     </div>
                 </div>
             </div>
@@ -64,7 +71,7 @@
                 <a href="{{ route('campaigns') }}" class="{{ $nav('campaigns') }}" data-tip="Campanhas e UTMs"><i class="fa-solid fa-bullhorn"></i><span class="lbl">Campanhas e UTMs</span></a>
             @endcan
 
-            <div class="fp-nav-label"><span class="lbl">Conta</span></div>
+            <div class="fp-nav-label"><span class="lbl">Empresa</span></div>
             <a href="{{ route('members.index') }}" class="{{ $nav('members.*') }}" data-tip="Equipe"><i class="fa-solid fa-user-group"></i><span class="lbl">Equipe</span></a>
             @can('audit.view')
                 <a href="{{ route('audit') }}" class="{{ $nav('audit') }}" data-tip="Auditoria"><i class="fa-solid fa-clock-rotate-left"></i><span class="lbl">Auditoria</span></a>
@@ -73,10 +80,6 @@
                 <a href="{{ route('account.edit') }}" class="{{ $nav('account.*') }}" data-tip="Configurações"><i class="fa-solid fa-gear"></i><span class="lbl">Configurações</span></a>
             @endcan
 
-            @if ($user->is_super_admin && ! session('impersonator_id'))
-                <div class="fp-nav-label"><span class="lbl">Plataforma</span></div>
-                <a href="{{ route('admin.dashboard') }}" class="is-admin-link" data-tip="Administração"><i class="fa-solid fa-shield-halved"></i><span class="lbl">Administração</span><i class="fa-solid fa-arrow-up-right-from-square lbl ext"></i></a>
-            @endif
         </nav>
 
         <button type="button" class="sb-collapse" onclick="TFSidebar.toggle()" data-tip="Expandir menu" aria-label="Recolher ou expandir o menu">
@@ -96,15 +99,6 @@
     </aside>
 
     <div class="fp-main">
-        @if (session('impersonator_id'))
-            <div class="impersonating">
-                <span><i class="fa-solid fa-user-secret"></i> Você está acessando como <strong>{{ $user->name }}</strong> ({{ $user->email }}). Tudo o que fizer fica registrado como esta pessoa.</span>
-                <form method="POST" action="{{ route('impersonate.stop') }}">@csrf<button class="button is-small">Voltar para minha conta</button></form>
-            </div>
-        @endif
-        @if ($account->isSuspended())
-            <div class="impersonating is-danger"><span><i class="fa-solid fa-ban"></i> Esta conta está suspensa{{ $account->suspension_reason ? ': '.$account->suspension_reason : '' }}. Só administradores da plataforma conseguem vê-la.</span></div>
-        @endif
         <header class="fp-topbar">
             <button class="fp-burger" @click="open = !open" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
             <div style="min-width:0">

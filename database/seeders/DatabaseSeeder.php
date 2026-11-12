@@ -30,7 +30,6 @@ class DatabaseSeeder extends Seeder
         mt_srand(42);
 
         $owner = User::create(['name' => 'Demo TraceForms', 'email' => 'demo@traceforms.test', 'password' => 'traceforms123']);
-        $owner->forceFill(['is_super_admin' => true])->save(); // acesso ao painel /admin
         $account = Account::createFor($owner, 'Acme Marketing');
         $account->update(['timezone' => 'America/Sao_Paulo']);
 

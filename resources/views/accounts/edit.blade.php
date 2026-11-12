@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Configurações da conta')
+@section('title', 'Configurações da empresa')
 @section('crumb'){{ $account->name }}@endsection
 
 @section('content')
@@ -12,8 +12,12 @@
 
     <form method="POST" action="{{ route('account.update') }}" class="box">
         @csrf @method('PUT')
-        <div class="box-title"><i class="fa-solid fa-building has-text-primary"></i> Geral</div>
-        <div class="field"><label class="label">Nome da conta</label><input class="input" name="name" value="{{ old('name', $account->name) }}" required></div>
+        <div class="box-title">Geral</div>
+        <div class="field">
+            <label class="label">Nome da empresa</label>
+            <p>{{ $account->name }}</p>
+            <p class="help">O nome vem do Trace ID e é atualizado a cada login. Para mudar, altere lá.</p>
+        </div>
         <div class="columns">
             <div class="column field">
                 <label class="label">Fuso horário dos relatórios</label>
@@ -34,35 +38,14 @@
         <button class="button is-primary">Salvar</button>
     </form>
 
-    @can('account.transfer')
-        <form method="POST" action="{{ route('account.transfer') }}" class="box" x-data="{ open: false }">
-            @csrf
-            <div class="box-title"><i class="fa-solid fa-crown has-text-warning"></i> Transferir propriedade</div>
-            <p class="is-size-7 has-text-muted mb-3">O novo proprietário terá controle total. Você passará a ser Administrador.</p>
-            @if ($transferTargets->isEmpty())
-                <p class="is-size-7">Convide alguém para a equipe primeiro.</p>
-            @else
-                <button type="button" class="button is-small" @click="open = !open" x-show="!open">Transferir…</button>
-                <div x-show="open" x-cloak>
-                    <div class="field"><div class="select"><select name="membership_id">@foreach ($transferTargets as $t)<option value="{{ $t->id }}">{{ $t->user->name }} ({{ $t->role->label() }})</option>@endforeach</select></div></div>
-                    <div class="field"><label class="label is-small">Digite <strong>{{ $account->name }}</strong> para confirmar</label><input class="input" name="confirm" autocomplete="off"></div>
-                    <button class="button is-warning">Transferir propriedade</button>
-                </div>
-            @endif
-        </form>
-    @endcan
-
-    @can('account.delete')
-        <form method="POST" action="{{ route('account.destroy') }}" class="box" style="border-color:#f5c2c4" x-data="{ open: false }">
-            @csrf @method('DELETE')
-            <div class="box-title has-text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Zona de perigo</div>
-            <p class="is-size-7 mb-3">Excluir a conta remove permanentemente todos os formulários, respostas, dados de visitas e acessos da equipe.</p>
-            <button type="button" class="button is-danger is-light is-small" @click="open = true" x-show="!open">Excluir conta…</button>
-            <div x-show="open" x-cloak>
-                <div class="field"><label class="label is-small">Digite <strong>{{ $account->name }}</strong> para confirmar</label><input class="input" name="confirm" autocomplete="off"></div>
-                <button class="button is-danger">Excluir definitivamente</button>
-            </div>
-        </form>
-    @endcan
+    @if ($account->trace_features)
+        <div class="box">
+            <div class="box-title">Plano no Trace ID</div>
+            @foreach ($account->trace_features as $key => $value)
+                <div class="stat-line"><span>{{ \Illuminate\Support\Str::of($key)->replace('_', ' ')->ucfirst() }}</span><strong>{{ is_bool($value) ? ($value ? 'Incluso' : 'Não incluso') : ($value === null ? 'Ilimitado' : $value) }}</strong></div>
+            @endforeach
+            <p class="help mt-2">Atualizado em {{ $account->trace_synced_at?->timezone($account->timezone)->format('d/m/Y H:i') ?? '—' }}.</p>
+        </div>
+    @endif
 </div>
 @endsection

@@ -13,7 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'account' => \App\Http\Middleware\SetCurrentAccount::class,
-            'super' => \App\Http\Middleware\EnsureSuperAdmin::class,
+            'trace' => \App\Http\Middleware\EnsureTraceSession::class,
         ]);
         // Endpoints de coleta recebem sendBeacon/fetch de iframes e páginas externas.
         $middleware->validateCsrfTokens(except: ['f/*/collect', 'f/*/submit', 'f/*/upload']);

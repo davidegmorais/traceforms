@@ -4,12 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
@@ -22,18 +18,6 @@ class ProfileController extends Controller
                 ? \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $request->user()->id)->orderByDesc('last_activity')->limit(10)->get()
                 : collect(),
         ]);
-    }
-
-    public function update(Request $request)
-    {
-        $user = $request->user();
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-        ], ['email.unique' => 'Este e-mail já está em uso por outra pessoa.']);
-        $user->update(['name' => $data['name'], 'email' => strtolower($data['email'])]);
-
-        return back()->with('success', 'Dados atualizados.');
     }
 
     /** Recebe a foto, corta em quadrado e reduz para 320×320 (se o GD estiver disponível). */
@@ -74,36 +58,14 @@ class ProfileController extends Controller
         return back()->with('success', 'Foto removida.');
     }
 
-    public function password(Request $request)
-    {
-        $request->validate([
-            'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
-        ], [
-            'current_password.current_password' => 'A senha atual está incorreta.',
-            'password.confirmed' => 'A confirmação não confere com a nova senha.',
-            'password.min' => 'A nova senha precisa ter pelo menos 8 caracteres.',
-            'password.letters' => 'A nova senha precisa ter letras.',
-            'password.numbers' => 'A nova senha precisa ter números.',
-        ]);
-        $request->user()->update(['password' => Hash::make($request->password)]);
-
-        if ($request->boolean('logout_others')) {
-            Auth::logoutOtherDevices($request->password);
-        }
-
-        return back()->with('success', 'Senha alterada.'.($request->boolean('logout_others') ? ' Você saiu dos outros dispositivos.' : ''));
-    }
-
+    /** Encerra as outras sessões do TraceForms (o login no Trace ID não é afetado). */
     public function logoutOthers(Request $request)
     {
-        $request->validate(['password' => ['required', 'current_password']], ['password.current_password' => 'Senha incorreta.']);
-        Auth::logoutOtherDevices($request->password);
         if (config('session.driver') === 'database') {
             \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $request->user()->id)->where('id', '!=', $request->session()->getId())->delete();
         }
 
-        return back()->with('success', 'Você saiu de todos os outros dispositivos.');
+        return back()->with('success', 'Você saiu dos outros dispositivos.');
     }
 
     /** Serve a foto de um usuário (somente para usuários autenticados). */
