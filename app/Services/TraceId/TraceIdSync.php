@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Membership;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -55,7 +56,7 @@ class TraceIdSync
         }
 
         return DB::transaction(function () use ($claims, $trace) {
-            $user = $this->user($claims);
+            $user = $this->user($claims, $trace);
             $account = $this->account($trace, $user);
             $membership = $this->membership($account, $user, $trace['level'] ?? null);
 
@@ -78,24 +79,41 @@ class TraceIdSync
         return $this->membership($account, $user, $trace['level'] ?? null);
     }
 
-    private function user(array $claims): User
+    private function user(array $claims, array $trace): User
     {
         $sub = (string) $claims['sub'];
         $email = isset($claims['email']) ? Str::lower(trim($claims['email'])) : null;
         $name = trim((string) ($claims['name'] ?? $claims['given_name'] ?? ''));
+        $verified = ($claims['email_verified'] ?? true) !== false;
 
         $user = User::where('trace_id', $sub)->first();
 
-        if (! $user && $email && ($claims['email_verified'] ?? true) !== false) {
-            $user = User::whereNull('trace_id')->where('email', $email)->first();
+        if (! $user && $email) {
+            $candidate = User::where('email', $email)->first();
+
+            if ($candidate && $candidate->trace_id && $candidate->trace_id !== $sub) {
+                Log::warning('Trace ID: e-mail já ligado a outra identidade', ['email' => $email, 'sub_novo' => $sub, 'sub_atual' => $candidate->trace_id]);
+                throw new TraceIdException('Este e-mail já está ligado a outra identidade do Trace ID. Fale com o suporte.');
+            }
+
+            if ($candidate) {
+                // E-mail verificado no Trace ID: liga direto. Sem verificação, só liga se a pessoa
+                // está entrando numa empresa já ligada ao Trace ID da qual este usuário já é membro
+                // (foi o administrador da empresa no Trace ID quem deu esse acesso).
+                $linkedAccount = Account::where('trace_account_id', (string) ($trace['account']['id'] ?? ''))->first();
+                $memberThere = $linkedAccount && Membership::where('account_id', $linkedAccount->id)->where('user_id', $candidate->id)->exists();
+
+                if (! $verified && ! $memberThere) {
+                    Log::warning('Trace ID: e-mail não verificado', ['email' => $email, 'sub' => $sub]);
+                    throw new TraceIdException('Confirme seu e-mail no Trace ID para entrar no TraceForms, ou peça ao suporte para ligar sua empresa.');
+                }
+                $user = $candidate;
+            }
         }
 
         if (! $user) {
             if (! $email) {
                 throw new TraceIdException('O Trace ID não informou o e-mail desta pessoa. Peça para incluir o escopo "email" na plataforma.');
-            }
-            if (User::where('email', $email)->exists()) {
-                throw new TraceIdException('Este e-mail já está ligado a outra identidade do Trace ID. Fale com o suporte.');
             }
             $user = new User(['email' => $email]);
         }
