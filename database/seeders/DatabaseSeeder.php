@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
     {
         mt_srand(42);
 
-        $owner = User::create(['name' => 'Demo TraceForms', 'email' => 'demo@traceforms.test', 'password' => 'traceforms123']);
+        $owner = User::create(['name' => 'Demo TraceForms', 'email' => 'demo@traceforms.test']);
         $account = Account::createFor($owner, 'Acme Marketing');
         $account->update(['timezone' => 'America/Sao_Paulo']);
 
@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
             ['Leo Leitor', 'leitor@traceforms.test', Role::Viewer],
         ];
         foreach ($team as [$name, $email, $role]) {
-            $u = User::create(['name' => $name, 'email' => $email, 'password' => 'traceforms123', 'current_account_id' => $account->id]);
+            $u = User::create(['name' => $name, 'email' => $email, 'current_account_id' => $account->id]);
             $account->users()->attach($u->id, ['role' => $role->value]);
         }
         Account::createFor(User::where('email', 'admin@traceforms.test')->first(), 'Cliente Beta (agência)');

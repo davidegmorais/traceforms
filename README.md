@@ -313,6 +313,8 @@ php artisan traceforms:trace-push 1
 
 Cada membro recebe o nível equivalente ao papel atual (o antigo Proprietário vira admin). Quem já tem conta no Trace ID mantém a senha. Para quem não tinha, o Trace ID gera uma senha, que aparece **uma única vez** no terminal para você enviar à pessoa. Rodar de novo não duplica nada; quem já tem acesso aparece como "Já tem acesso". Se o plano tiver limite de pessoas por nível, quem passar do limite aparece como "Falhou" e precisa ser ajustado no Trace ID.
 
+A migração `2026_11_12_000200` apaga o que sobrou do login antigo no banco: as tabelas de convites e de redefinição de senha, a marcação de administrador da plataforma, a suspensão de usuário e as senhas antigas.
+
 **4. Avise a equipe.** No primeiro login, cada pessoa é reconhecida pelo e-mail e fica ligada ao Trace ID. Sessões abertas antes da migração são encerradas e pedem um novo login.
 
 **5. Confira** com `traceforms:trace-status`: a coluna "Já entraram pelo Trace ID" mostra quem já fez o primeiro login.

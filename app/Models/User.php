@@ -15,7 +15,7 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'current_account_id', 'locale', 'last_login_at', 'avatar_path'];
+    protected $fillable = ['name', 'email', 'current_account_id', 'locale', 'last_login_at', 'avatar_path'];
 
     // trace_id (sub do Trace ID) é definido só pelo login (TraceIdSync), nunca por formulário.
 
@@ -26,7 +26,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
-            'suspended_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -63,11 +62,6 @@ class User extends Authenticatable
         $this->setRelation('currentAccount', $account);
 
         return true;
-    }
-
-    public function isSuspended(): bool
-    {
-        return $this->suspended_at !== null;
     }
 
     public function avatarUrl(): ?string
