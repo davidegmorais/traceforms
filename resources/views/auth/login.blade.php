@@ -4,6 +4,10 @@
     <h1 class="title is-3 mb-2" style="letter-spacing:-.02em">Bem-vindo de volta</h1>
     <p class="has-text-muted mb-5">Entre para ver seus formulários e relatórios.</p>
 
+    @if (session('status'))
+        <div class="notification is-info is-light is-size-7">{{ session('status') }}</div>
+    @endif
+
     <form method="POST" action="{{ route('login') }}" x-data="{ loading: false }" @submit="loading = true">
         @csrf
         <div class="field">
@@ -28,5 +32,9 @@
         <label class="checkbox is-size-7 mb-4"><input type="checkbox" name="remember" checked> Manter conectado</label>
         <button class="button is-primary is-fullwidth is-medium mt-3" :class="{ 'is-loading': loading }">Entrar</button>
     </form>
-    <p class="has-text-centered mt-5 is-size-7">Ainda não tem conta? <a href="{{ route('register') }}" class="has-text-weight-semibold">Criar conta grátis</a></p>
+    @if (config('traceforms.registration_open'))
+        <p class="has-text-centered mt-5 is-size-7">Ainda não tem conta? <a href="{{ route('register') }}" class="has-text-weight-semibold">Criar conta grátis</a></p>
+    @else
+        <p class="has-text-centered mt-5 is-size-7 has-text-muted">O acesso é liberado pelo administrador.</p>
+    @endif
 @endsection

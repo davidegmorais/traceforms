@@ -69,7 +69,7 @@
         <p>{{ $closed === 'already' ? 'Recebemos sua resposta anteriormente. Obrigado!' : ($closed === 'draft' ? 'Este formulário ainda não foi publicado.' : $s('closed_message')) }}</p>
     </main>
 @else
-<div class="tf-app" x-data="tfForm()" x-init="init()" x-cloak :class="{ 'go-back': dir < 0 }">
+<div class="tf-app" x-data="tfForm()" x-cloak :class="{ 'go-back': dir < 0 }">
 
     @if ($chat)
         <header class="tf-chat-head">

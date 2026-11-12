@@ -14,7 +14,7 @@ O diferencial é a **coleta de dados**: cada resposta chega com a campanha, o an
 4. [Atualizar para uma versão nova](#atualizar-para-uma-versão-nova)
 5. [Funcionalidades](#funcionalidades)
 6. [Níveis de acesso](#níveis-de-acesso)
-7. [Administração da plataforma](#administração-da-plataforma) — inclui [como se tornar administrador geral](#como-se-tornar-administrador-geral)
+7. [Administração da plataforma](#administração-da-plataforma) — inclui [cadastro aberto ou fechado](#cadastro-aberto-ou-fechado) e [como se tornar administrador geral](#como-se-tornar-administrador-geral)
 8. [Integrações](#integrações)
 9. [Colocar em produção](#colocar-em-produção)
 10. [Arquitetura](#arquitetura)
@@ -109,11 +109,13 @@ O `--seed` cria uma empresa de demonstração ("Acme Marketing") com cerca de 9 
 | `analista@traceforms.test` | Analista | Vê e exporta respostas, sem editar |
 | `leitor@traceforms.test` | Leitor | Só painéis, restrito a um formulário |
 
-Sem o `--seed`, crie sua conta em `/register` e dê a você mesmo o acesso à administração:
+Sem o `--seed`, crie sua conta de administrador pelo terminal. O comando pergunta nome, empresa e senha:
 
 ```bash
 php artisan traceforms:make-admin seu@email.com
 ```
+
+O cadastro público em `/register` vem **fechado**. Os outros usuários são criados por você em *Administração → Usuários → Novo usuário* ou entram por convite de uma empresa. Veja [Cadastro aberto ou fechado](#cadastro-aberto-ou-fechado).
 
 ---
 
@@ -238,27 +240,46 @@ Uma pessoa pode participar de várias **empresas (contas)**, com um papel difere
 - **Acesso:** item **Administração** na barra lateral (seção "Plataforma"), que só aparece para administradores da plataforma, ou direto em `/admin`
 - **Visão geral:** empresas, usuários, formulários publicados, respostas e espaço usado por arquivos, com gráfico de 30 dias
 - **Empresas:** membros (alterar papel, adicionar, remover), trocar proprietário, suspender com motivo, reativar e excluir com todos os dados
-- **Usuários:** editar nome e e-mail, definir nova senha (encerra as sessões abertas), dar ou tirar acesso de administrador, suspender, excluir e **acessar como** a pessoa para dar suporte (com aviso fixo na tela e registro no histórico)
+- **Usuários:** criar usuários (veja abaixo), editar nome e e-mail, definir nova senha (encerra as sessões abertas), dar ou tirar acesso de administrador, suspender, excluir e **acessar como** a pessoa para dar suporte (com aviso fixo na tela e registro no histórico)
 - **Suspensões:** um usuário suspenso não consegue entrar; uma empresa suspensa bloqueia os membros e para de aceitar respostas, sem apagar dados
+
+### Cadastro aberto ou fechado
+
+Por padrão o cadastro público está **fechado**: `/register` leva para a tela de entrar com um aviso, e a página inicial mostra só o botão *Entrar*. Novas pessoas entram de duas formas:
+
+- **Criadas pela Administração:** em *Administração → Usuários → Novo usuário*, preencha nome e e-mail e escolha entre criar uma empresa nova (a pessoa vira proprietária) ou adicionar a uma empresa existente com um papel. Se a senha ficar em branco, uma é gerada e mostrada **uma única vez**, com botão de copiar, para você enviar à pessoa.
+- **Convite de uma empresa:** quem tem um convite válido consegue se cadastrar pelo link do convite, com o e-mail convidado, mesmo com o cadastro fechado.
+
+Para abrir o cadastro a qualquer pessoa, coloque no `.env` e limpe o cache de configuração:
+
+```env
+TRACEFORMS_REGISTRATION_OPEN=true
+```
+```bash
+php artisan config:cache
+```
 
 ### Como se tornar administrador geral
 
 O administrador geral (administrador da plataforma) é quem vê a aba **Administração** e acessa `/admin`. É uma marcação no cadastro do usuário, independente do papel dentro das empresas.
 
-**1. Crie o usuário.** Cadastre-se normalmente em `/register` (ou use um usuário que já existe).
+**1. Crie o usuário e dê o acesso pelo terminal (recomendado)**, na pasta do projeto:
 
-**2. Dê o acesso, de uma destas formas:**
+```bash
+php artisan traceforms:make-admin seu@email.com
+```
 
-- **Pelo terminal (recomendado)**, na pasta do projeto:
-  ```bash
-  php artisan traceforms:make-admin seu@email.com
-  ```
-  A resposta é `Fulano agora é administrador da plataforma. Acesse /admin.` Para remover o acesso:
-  ```bash
-  php artisan traceforms:make-admin seu@email.com --remove
-  ```
+Se ainda não existir usuário com esse e-mail, o comando pergunta nome, nome da empresa e senha, e cria tudo. Se já existir, só dá o acesso. A resposta é `Fulano agora é administrador da plataforma. Entre e acesse /admin.`
 
-- **Por outro administrador geral:** em *Administração → Usuários*, abra a pessoa, marque *Administrador da plataforma (acesso a /admin)* e clique em *Salvar*.
+Para remover o acesso:
+
+```bash
+php artisan traceforms:make-admin seu@email.com --remove
+```
+
+**2. Outras formas de dar o acesso** a um usuário que já existe:
+
+- **Por outro administrador geral:** em *Administração → Usuários*, abra a pessoa (ou crie em *Novo usuário*), marque *Administrador da plataforma (acesso a /admin)* e clique em *Salvar*.
 
 - **Direto no banco** (se não tiver acesso ao terminal da aplicação):
   ```sql
@@ -315,7 +336,7 @@ Funciona com Zapier, Make, n8n ou o seu CRM.
 
 ## Colocar em produção
 
-1. **`.env`:** defina `APP_ENV=production`, `APP_DEBUG=false` e `APP_URL=https://seu-dominio`, além do e-mail (`MAIL_*`).
+1. **`.env`:** defina `APP_ENV=production`, `APP_DEBUG=false` e `APP_URL=https://seu-dominio`, além do e-mail (`MAIL_*`). O cadastro público fica fechado a menos que você defina `TRACEFORMS_REGISTRATION_OPEN=true`.
 2. **Permissões:**
    ```bash
    sudo chown -R www-data:www-data storage bootstrap/cache

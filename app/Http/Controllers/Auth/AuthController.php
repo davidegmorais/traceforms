@@ -44,8 +44,13 @@ class AuthController extends Controller
     public function showRegister(Request $request)
     {
         $invitation = $request->query('invite') ? Invitation::with('account')->where('token', $request->query('invite'))->first() : null;
+        $invitation = $invitation?->isPending() ? $invitation : null;
 
-        return view('auth.register', ['invitation' => $invitation?->isPending() ? $invitation : null]);
+        if (! $invitation && ! config('traceforms.registration_open')) {
+            return redirect()->route('login')->with('status', 'O cadastro está fechado. Peça acesso ao administrador ou use o link do convite que você recebeu.');
+        }
+
+        return view('auth.register', ['invitation' => $invitation]);
     }
 
     public function register(Request $request)
@@ -64,6 +69,16 @@ class AuthController extends Controller
             'password.letters' => 'A senha precisa conter letras.',
             'password.numbers' => 'A senha precisa conter números.',
         ]);
+
+        // Com o cadastro fechado, só passa quem tem um convite válido para este e-mail.
+        if (! config('traceforms.registration_open')) {
+            $invite = ! empty($data['invite'])
+                ? Invitation::where('token', $data['invite'])->whereNull('accepted_at')->where('expires_at', '>', now())->first()
+                : null;
+            if (! $invite || strtolower($invite->email) !== strtolower($data['email'])) {
+                return redirect()->route('login')->with('status', 'O cadastro está fechado. Peça acesso ao administrador ou use o link do convite que você recebeu.');
+            }
+        }
 
         $user = DB::transaction(function () use ($data) {
             $user = User::create([

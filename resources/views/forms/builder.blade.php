@@ -13,7 +13,7 @@
 @endsection
 
 @section('fullwidth')
-<div x-data="builder()" x-init="init()" @keydown.window.ctrl.s.prevent="save()" @keydown.window.meta.s.prevent="save()">
+<div x-data="builder()" @keydown.window.ctrl.s.prevent="save()" @keydown.window.meta.s.prevent="save()">
     <div class="fp-content" style="padding-bottom:0">@include('partials.form-header')</div>
 
     <div class="builder" style="margin-top:-1.6rem">

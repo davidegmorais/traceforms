@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
+use App\Models\Account;
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 /** Administração dos usuários da plataforma. */
@@ -31,6 +33,72 @@ class AdminUserController extends Controller
         $request->query('sort') === 'login' ? $q->orderByDesc('last_login_at') : $q->latest();
 
         return view('admin.users.index', ['users' => $q->paginate(30)->withQueryString()]);
+    }
+
+    public function create()
+    {
+        return view('admin.users.create', [
+            'accounts' => Account::orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    /** Cria um usuário já com acesso: numa empresa nova (como dono) ou numa existente. */
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['nullable', Password::min(8)->letters()->numbers()],
+            'account_mode' => ['required', Rule::in(['new', 'existing'])],
+            'company' => ['nullable', 'required_if:account_mode,new', 'string', 'max:120'],
+            'account_id' => ['nullable', 'required_if:account_mode,existing', 'exists:accounts,id'],
+            'role' => ['nullable', 'required_if:account_mode,existing', Rule::in(['admin', 'editor', 'analyst', 'viewer'])],
+            'is_super_admin' => ['nullable', 'boolean'],
+        ], [
+            'required' => 'Campo obrigatório.',
+            'required_if' => 'Campo obrigatório.',
+            'email.unique' => 'Já existe um usuário com este e-mail.',
+            'password.min' => 'A senha precisa ter pelo menos 8 caracteres.',
+            'password.letters' => 'A senha precisa conter letras.',
+            'password.numbers' => 'A senha precisa conter números.',
+        ]);
+
+        $generated = empty($data['password']);
+        $password = $generated ? Str::password(14, symbols: false) : $data['password'];
+
+        $user = DB::transaction(function () use ($data, $password, $request) {
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => strtolower($data['email']),
+                'password' => $password,
+            ]);
+            $user->forceFill(['is_super_admin' => $request->boolean('is_super_admin')])->save();
+
+            if ($data['account_mode'] === 'new') {
+                Account::createFor($user, $data['company']);
+            } else {
+                $account = Account::findOrFail($data['account_id']);
+                $account->users()->attach($user->id, ['role' => $data['role']]);
+                $user->forceFill(['current_account_id' => $account->id])->save();
+                AuditLog::create([
+                    'account_id' => $account->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'member.added',
+                    'subject_type' => 'Account',
+                    'subject_id' => $account->id,
+                    'description' => 'Administração da plataforma criou '.$user->name.' como '.Role::from($data['role'])->label(),
+                    'meta' => ['by_platform_admin' => true],
+                    'ip' => $request->ip(),
+                    'created_at' => now(),
+                ]);
+            }
+
+            return $user;
+        });
+
+        return redirect()->route('admin.users.show', $user)
+            ->with('success', 'Usuário criado.')
+            ->with('new_password', $generated ? $password : null);
     }
 
     public function show(User $user)

@@ -13,6 +13,15 @@
 @endsection
 
 @section('content')
+@if (session('new_password'))
+    <div class="notification is-success is-light" x-data="{ copied: false }">
+        <p class="mb-2"><strong>Senha gerada para {{ $u->email }}</strong>. Ela aparece só agora: copie e envie para a pessoa. Ela pode trocar depois em Meu perfil.</p>
+        <div class="field has-addons mb-0" style="max-width:420px">
+            <div class="control is-expanded"><input class="input is-family-monospace" readonly value="{{ session('new_password') }}" x-ref="pw" @focus="$el.select()"></div>
+            <div class="control"><button type="button" class="button" @click="navigator.clipboard.writeText($refs.pw.value); copied = true" x-text="copied ? 'Copiada' : 'Copiar'">Copiar</button></div>
+        </div>
+    </div>
+@endif
 <div class="columns">
     <div class="column is-7">
         <div class="box">

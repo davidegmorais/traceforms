@@ -32,14 +32,37 @@ Artisan::command('traceforms:prune', function () {
 })->purpose('Aplica a política de retenção de dados de visitas de cada conta');
 
 Artisan::command('traceforms:make-admin {email} {--remove : Remove o acesso de administrador}', function (string $email) {
-    $user = App\Models\User::where('email', strtolower($email))->first();
-    if (! $user) {
-        $this->error("Nenhum usuário com o e-mail {$email}. Crie a conta em /register primeiro.");
+    $email = strtolower($email);
+    $user = App\Models\User::where('email', $email)->first();
+
+    if (! $user && $this->option('remove')) {
+        $this->error("Nenhum usuário com o e-mail {$email}.");
 
         return 1;
     }
+
+    if (! $user) {
+        $this->info("Não existe usuário com o e-mail {$email}. Vamos criar.");
+        $name = trim((string) $this->ask('Nome'));
+        $company = trim((string) $this->ask('Nome da empresa', 'TraceForms'));
+        do {
+            $password = (string) $this->secret('Senha (mínimo 8 caracteres, com letras e números)');
+            $ok = strlen($password) >= 8 && preg_match('/[a-zA-Z]/', $password) && preg_match('/\d/', $password);
+            if (! $ok) {
+                $this->warn('Senha fraca. Tente de novo.');
+            }
+        } while (! $ok);
+
+        $user = Illuminate\Support\Facades\DB::transaction(function () use ($email, $name, $company, $password) {
+            $user = App\Models\User::create(['name' => $name ?: 'Administrador', 'email' => $email, 'password' => $password]);
+            App\Models\Account::createFor($user, $company ?: 'TraceForms');
+
+            return $user;
+        });
+    }
+
     $user->forceFill(['is_super_admin' => ! $this->option('remove')])->save();
-    $this->info($this->option('remove') ? "{$user->name} não é mais administrador da plataforma." : "{$user->name} agora é administrador da plataforma. Acesse /admin.");
-})->purpose('Dá (ou remove) acesso ao painel de administração da plataforma');
+    $this->info($this->option('remove') ? "{$user->name} não é mais administrador da plataforma." : "{$user->name} agora é administrador da plataforma. Entre e acesse /admin.");
+})->purpose('Dá (ou remove) acesso de administrador da plataforma; cria o usuário se ele não existir');
 
 Schedule::command('traceforms:prune')->dailyAt('03:30');

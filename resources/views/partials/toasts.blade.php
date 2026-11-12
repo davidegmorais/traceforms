@@ -1,4 +1,4 @@
-<div class="fp-toasts" x-data="toasts()" x-init="init()" @toast.window="push($event.detail)">
+<div class="fp-toasts" x-data="toasts()" @toast.window="push($event.detail)">
     <template x-for="t in items" :key="t.id">
         <div class="notification fp-toast" :class="t.type === 'error' ? 'is-danger' : (t.type === 'info' ? 'is-info is-light' : 'is-success')" x-show="t.show" x-transition.opacity>
             <button class="delete" @click="t.show = false"></button>

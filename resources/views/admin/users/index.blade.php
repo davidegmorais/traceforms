@@ -1,5 +1,8 @@
 @extends('layouts.admin')
 @section('title', 'Usuários')
+@section('actions')
+    <a href="{{ route('admin.users.create') }}" class="button is-small is-primary"><i class="fa-solid fa-user-plus mr-2"></i> Novo usuário</a>
+@endsection
 
 
 @section('content')

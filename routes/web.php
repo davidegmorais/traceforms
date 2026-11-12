@@ -134,6 +134,8 @@ Route::middleware(['auth', 'super'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/accounts/{account}', [AdminAccountController::class, 'destroy'])->name('accounts.destroy');
 
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
+    Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
     Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
     Route::post('/users/{user}/suspend', [AdminUserController::class, 'suspend'])->name('users.suspend');

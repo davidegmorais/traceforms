@@ -1,4 +1,6 @@
 @php
+    $signupOpen = (bool) config('traceforms.registration_open');
+    $signupUrl = $signupOpen ? route('register') : route('login');
     $templates = \App\Support\FormTemplates::all();
     unset($templates['blank']);
     $types = \App\Support\FieldTypes::grouped();
@@ -38,8 +40,12 @@
             @auth
                 <a href="{{ route('dashboard') }}" class="button is-primary">Ir para o painel</a>
             @else
-                <a href="{{ route('login') }}" class="button is-white">Entrar</a>
-                <a href="{{ route('register') }}" class="button is-primary">Criar conta</a>
+                @if ($signupOpen)
+                    <a href="{{ route('login') }}" class="button is-white">Entrar</a>
+                    <a href="{{ $signupUrl }}" class="button is-primary">Criar conta</a>
+                @else
+                    <a href="{{ route('login') }}" class="button is-primary">Entrar</a>
+                @endif
             @endauth
         </div>
         <button class="s-burger" @click="open = !open" :aria-expanded="open" aria-label="Abrir menu"><i class="fa-solid" :class="open ? 'fa-xmark' : 'fa-bars'"></i></button>
@@ -54,7 +60,7 @@
                 <h1>Formulários que mostram de onde veio cada resposta.</h1>
                 <p class="lead">Crie formulários, pesquisas e inscrições em minutos. Cada resposta chega com a campanha, o anúncio, o dispositivo e o caminho que a pessoa fez até enviar — e você vê em qual pergunta os outros desistiram.</p>
                 <div class="buttons">
-                    <a href="{{ route('register') }}" class="button is-primary is-medium">Criar minha conta</a>
+                    <a href="{{ $signupUrl }}" class="button is-primary is-medium">{{ $signupOpen ? 'Criar minha conta' : 'Entrar na minha conta' }}</a>
                     <a href="#como-funciona" class="button is-medium is-white">Ver como funciona</a>
                 </div>
                 <ul class="hero-facts">
@@ -64,7 +70,7 @@
                 </ul>
             </div>
 
-            <div class="demo" x-data="siteDemo()" x-init="init()">
+            <div class="demo" x-data="siteDemo()">
                 <div class="demo-form">
                     <template x-if="step < questions.length">
                         <div>
@@ -83,7 +89,7 @@
                             <h3>Esse é o rastro que fica guardado em cada resposta.</h3>
                             <p>Ao lado está o que o TraceForms registraria sobre esta sua visita — sem perguntar nada a mais para quem responde.</p>
                             <div class="buttons mt-4">
-                                <a href="{{ route('register') }}" class="button is-primary">Criar meu primeiro formulário</a>
+                                <a href="{{ $signupUrl }}" class="button is-primary">Criar meu primeiro formulário</a>
                                 <button type="button" class="button is-white" @click="reset()">Responder de novo</button>
                             </div>
                         </div>
@@ -246,7 +252,7 @@
             <p class="sec-lead">Todos podem ser editados: troque perguntas, cores e formato.</p>
             <div class="tpls">
                 @foreach ($templates as $key => $t)
-                    <a href="{{ route('register') }}" class="tpl-card">
+                    <a href="{{ $signupUrl }}" class="tpl-card">
                         <span class="tpl-icon" style="background: {{ $t['color'] }}"><i class="fa-solid {{ $t['icon'] }}"></i></span>
                         <h3>{{ $t['name'] }}</h3>
                         <p>{{ $t['description'] }}</p>
@@ -312,9 +318,9 @@
             <div class="cta-band">
                 <div>
                     <h2>Seu próximo formulário já pode mostrar de onde vêm as respostas.</h2>
-                    <p>Crie a conta e publique o primeiro em poucos minutos.</p>
+                    <p>{{ $signupOpen ? 'Crie a conta e publique o primeiro em poucos minutos.' : 'Entre na sua conta e publique o primeiro em poucos minutos.' }}</p>
                 </div>
-                <a href="{{ route('register') }}" class="button is-medium">Criar minha conta</a>
+                <a href="{{ $signupUrl }}" class="button is-medium">{{ $signupOpen ? 'Criar minha conta' : 'Entrar na minha conta' }}</a>
             </div>
         </div>
     </section>
@@ -329,7 +335,7 @@
             </div>
             <div><h4>Produto</h4><ul><li><a href="#como-funciona">Como funciona</a></li><li><a href="#recursos">Recursos</a></li><li><a href="#modelos">Modelos</a></li></ul></div>
             <div><h4>Para quem</h4><ul><li><a href="#para-quem">Marketing</a></li><li><a href="#para-quem">RH e recrutamento</a></li><li><a href="#para-quem">Agências</a></li></ul></div>
-            <div><h4>Conta</h4><ul><li><a href="{{ route('login') }}">Entrar</a></li><li><a href="{{ route('register') }}">Criar conta</a></li><li><a href="#duvidas">Dúvidas</a></li></ul></div>
+            <div><h4>Conta</h4><ul><li><a href="{{ route('login') }}">Entrar</a></li>@if ($signupOpen)<li><a href="{{ $signupUrl }}">Criar conta</a></li>@endif<li><a href="#duvidas">Dúvidas</a></li></ul></div>
         </div>
         <div class="legal"><span>© {{ date('Y') }} TraceForms</span><span>Feito no Brasil</span></div>
     </div>
