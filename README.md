@@ -83,8 +83,10 @@ DB_DATABASE=traceforms
 DB_USERNAME=traceforms
 DB_PASSWORD=TroqueEstaSenha123!
 
-TRACEID_CLIENT_ID=id-da-plataforma-no-trace-id
-TRACEID_CLIENT_SECRET=segredo-da-plataforma
+TRACE_ID_URL=https://id.tracezap.com.br
+TRACE_ID_CLIENT_ID=id-da-plataforma-no-trace-id
+TRACE_ID_CLIENT_SECRET=segredo-da-plataforma
+TRACE_ID_REDIRECT_URI=https://seu-dominio/auth/callback
 ```
 
 Os dados do Trace ID vêm do cadastro do TraceForms como plataforma no Trace ID. Veja [Login pelo Trace ID](#login-pelo-trace-id).
@@ -106,7 +108,7 @@ Abra `http://localhost:8000`.
 
 ## Primeiro acesso
 
-1. Cadastre o TraceForms como plataforma no Trace ID e preencha `TRACEID_CLIENT_ID` e `TRACEID_CLIENT_SECRET` no `.env` (veja [Configurar](#configurar)).
+1. Cadastre o TraceForms como plataforma no Trace ID e preencha `TRACE_ID_CLIENT_ID`, `TRACE_ID_CLIENT_SECRET` e `TRACE_ID_REDIRECT_URI` no `.env` (veja [Configurar](#configurar)).
 2. No Trace ID, dê à sua pessoa acesso ao TraceForms com o nível **admin** na sua empresa.
 3. Abra o TraceForms e clique em **Entrar com Trace ID**.
 
@@ -223,7 +225,7 @@ Uma pessoa pode ter acesso a várias **empresas**, com um nível diferente em ca
 | usuario | Analista |
 | cliente | Leitor |
 
-A tradução pode ser mudada no `.env` com `TRACEID_LEVEL_ADMIN`, `TRACEID_LEVEL_GESTOR`, `TRACEID_LEVEL_USUARIO` e `TRACEID_LEVEL_CLIENTE` (valores: `admin`, `editor`, `analyst`, `viewer`).
+A tradução pode ser mudada no `.env` com `TRACE_ID_LEVEL_ADMIN`, `TRACE_ID_LEVEL_GESTOR`, `TRACE_ID_LEVEL_USUARIO` e `TRACE_ID_LEVEL_CLIENTE` (valores: `admin`, `editor`, `analyst`, `viewer`).
 
 | Permissão | Leitor | Analista | Editor | Administrador |
 |---|:-:|:-:|:-:|:-:|
@@ -245,7 +247,7 @@ O TraceForms não tem cadastro, senha nem painel de administração próprios. T
 - **Entrar:** a tela de login tem só o botão *Entrar com Trace ID*. O login segue o OpenID Connect (código de autorização com PKCE), e a assinatura do token é conferida com as chaves públicas do Trace ID.
 - **Pessoa:** cada pessoa fica ligada ao identificador permanente dela no Trace ID. Nome e e-mail são atualizados a cada login.
 - **Empresa:** cada empresa fica ligada ao identificador da conta no Trace ID. O nome e os recursos do plano vêm de lá.
-- **Nível:** vem do Trace ID e é conferido de novo a cada 5 minutos (`TRACEID_RECHECK_SECONDS`). Se o nível mudar lá, muda aqui sem novo login. Se o acesso for suspenso ou removido, a pessoa sai do TraceForms.
+- **Nível:** vem do Trace ID e é conferido de novo a cada 5 minutos (`TRACE_ID_RECHECK_SECONDS`). Se o nível mudar lá, muda aqui sem novo login. Se o acesso for suspenso ou removido, a pessoa sai do TraceForms.
 - **Trocar de empresa:** pelo seletor no topo do menu. A troca passa rapidamente pelo Trace ID, que confirma o acesso àquela empresa.
 - **Sair:** encerra a sessão no TraceForms e no Trace ID.
 - **Licença:** o comando agendado `traceforms:trace-sync` confere as licenças a cada hora. Empresa com licença inativa ou vencida fica suspensa: ninguém entra e os formulários param de aceitar respostas, mas nada é apagado. Quando a licença volta, a empresa é reativada sozinha.
@@ -257,23 +259,28 @@ O TraceForms não tem cadastro, senha nem painel de administração próprios. T
 
 | Campo | Valor |
 |---|---|
-| URL de retorno | `https://seu-dominio/auth/trace/callback` |
+| URL de retorno | `https://seu-dominio/auth/callback` |
 | URL depois de sair | `https://seu-dominio/` |
 | Escopos do login | `openid profile email offline_access` |
 | Escopos da API | `members:read members:write` |
 
-Para testar na sua máquina, cadastre também `http://127.0.0.1:8000/auth/trace/callback` e `http://127.0.0.1:8000/`.
+Para testar na sua máquina, cadastre também `http://127.0.0.1:8000/auth/callback` e `http://127.0.0.1:8000/`.
 
 **2. Preencha o `.env`:**
 
+Os nomes são os mesmos usados no TraceChat:
+
 ```env
-TRACEID_CLIENT_ID=id-da-plataforma
-TRACEID_CLIENT_SECRET=segredo-da-plataforma
+TRACE_ID_URL=https://id.tracezap.com.br
+TRACE_ID_CLIENT_ID=id-da-plataforma
+TRACE_ID_CLIENT_SECRET=segredo-da-plataforma
+TRACE_ID_REDIRECT_URI=https://seu-dominio/auth/callback
 # Opcionais
-TRACEID_ISSUER=https://id.tracezap.com.br
-TRACEID_RECHECK_SECONDS=300
-TRACEID_PROFILE_URL=https://id.tracezap.com.br
+TRACE_ID_RECHECK_SECONDS=300
+TRACE_ID_PROFILE_URL=https://id.tracezap.com.br
 ```
+
+A `TRACE_ID_REDIRECT_URI` precisa ser **idêntica** à URL de retorno cadastrada no Trace ID, inclusive com ou sem a barra no fim. O TraceForms aceita o retorno em `/auth/callback` e em `/auth/trace/callback`.
 
 **3. Rode** `php artisan config:cache`.
 
@@ -352,7 +359,7 @@ Funciona com Zapier, Make, n8n ou o seu CRM.
 
 ## Colocar em produção
 
-1. **`.env`:** defina `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://seu-dominio`, o e-mail (`MAIL_*`) e o Trace ID (`TRACEID_CLIENT_ID` e `TRACEID_CLIENT_SECRET`).
+1. **`.env`:** defina `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://seu-dominio`, o e-mail (`MAIL_*`) e o Trace ID (`TRACE_ID_CLIENT_ID`, `TRACE_ID_CLIENT_SECRET` e `TRACE_ID_REDIRECT_URI`).
 2. **Permissões:**
    ```bash
    sudo chown -R www-data:www-data storage bootstrap/cache
@@ -444,8 +451,8 @@ resources/views/
 | Upload falha com arquivo grande | Aumente `upload_max_filesize` e `post_max_size` no PHP e `client_max_body_size` no Nginx. |
 | Foto de perfil não é cortada | Instale o GD: `sudo apt install php-gd`. |
 | Layout antigo depois de atualizar | Rode `php artisan optimize:clear` e recarregue com `Ctrl+Shift+R`. |
-| "O login pelo Trace ID ainda não foi configurado" | Preencha `TRACEID_CLIENT_ID` e `TRACEID_CLIENT_SECRET` no `.env` e rode `php artisan config:cache`. |
-| O Trace ID mostra página de erro ao clicar em entrar | A URL de retorno cadastrada no Trace ID precisa ser exatamente `APP_URL` + `/auth/trace/callback`, inclusive `https` e sem barra no fim do `APP_URL`. |
+| "O login pelo Trace ID ainda não foi configurado" | Preencha `TRACE_ID_CLIENT_ID` e `TRACE_ID_CLIENT_SECRET` no `.env` e rode `php artisan config:cache`. |
+| O Trace ID mostra página de erro ao clicar em entrar | A `TRACE_ID_REDIRECT_URI` do `.env` precisa ser idêntica à URL de retorno cadastrada no Trace ID, inclusive `https` e a barra no fim. |
 | "O TraceForms não foi reconhecido pelo Trace ID" | ID ou segredo da plataforma errados no `.env`. |
 | A pessoa entrou numa empresa nova e vazia | A empresa antiga não estava ligada. Ligue com `traceforms:trace-link` e peça para a pessoa sair e entrar de novo. A empresa vazia pode ficar sem uso. |
 | "Este e-mail já está ligado a outra identidade do Trace ID" | Existem duas pessoas no Trace ID com o mesmo e-mail em momentos diferentes. Corrija no Trace ID ou limpe o `trace_id` do usuário antigo no banco. |

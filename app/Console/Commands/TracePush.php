@@ -27,7 +27,7 @@ class TracePush extends Command
             return self::FAILURE;
         }
         if (! $trace->configured()) {
-            $this->error('Preencha TRACEID_CLIENT_ID e TRACEID_CLIENT_SECRET no .env.');
+            $this->error('Preencha TRACE_ID_CLIENT_ID e TRACE_ID_CLIENT_SECRET no .env.');
 
             return self::FAILURE;
         }

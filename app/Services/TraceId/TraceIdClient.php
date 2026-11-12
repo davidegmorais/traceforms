@@ -28,7 +28,7 @@ class TraceIdClient
 
     public function redirectUri(): string
     {
-        return config('traceid.redirect_uri') ?: rtrim(config('app.url'), '/').'/auth/trace/callback';
+        return config('traceid.redirect_uri') ?: rtrim(config('app.url'), '/').'/auth/callback';
     }
 
     /** Metadados OIDC, com endereços padrão caso a descoberta falhe. */
@@ -219,7 +219,7 @@ class TraceIdClient
             throw new TraceIdException('Sua sessão no Trace ID terminou. Entre de novo.', 'invalid_grant');
         }
         if ($r->status() === 401) {
-            throw new TraceIdException('O TraceForms não foi reconhecido pelo Trace ID. Confira TRACEID_CLIENT_ID e TRACEID_CLIENT_SECRET no .env.', 'invalid_client');
+            throw new TraceIdException('O TraceForms não foi reconhecido pelo Trace ID. Confira TRACE_ID_CLIENT_ID e TRACE_ID_CLIENT_SECRET no .env.', 'invalid_client');
         }
         $this->failUnless($r, 'O Trace ID não respondeu como esperado. Tente de novo em instantes.');
 

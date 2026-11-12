@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Mantém a sessão alinhada ao Trace ID:
  *  - sessões sem tokens do Trace ID (ex.: login antigo por senha) são encerradas;
- *  - a cada TRACEID_RECHECK_SECONDS, renova o token se venceu e confere o acesso (userinfo),
+ *  - a cada TRACE_ID_RECHECK_SECONDS, renova o token se venceu e confere o acesso (userinfo),
  *    atualizando nível e recursos. Acesso suspenso ou removido encerra a sessão.
  *  - se o Trace ID estiver fora do ar, a sessão segue e a conferência é tentada de novo em 1 minuto.
  */

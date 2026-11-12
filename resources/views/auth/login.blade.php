@@ -15,7 +15,7 @@
         <p class="has-text-centered mt-5 is-size-7 has-text-muted">Não tem acesso? Peça ao administrador da sua empresa para liberar o TraceForms no Trace ID.</p>
     @else
         <div class="notification is-danger is-light is-size-7">
-            O login pelo Trace ID ainda não foi configurado. Preencha <span class="mono">TRACEID_CLIENT_ID</span> e <span class="mono">TRACEID_CLIENT_SECRET</span> no <span class="mono">.env</span> e rode <span class="mono">php artisan config:cache</span>.
+            O login pelo Trace ID ainda não foi configurado. Preencha <span class="mono">TRACE_ID_CLIENT_ID</span> e <span class="mono">TRACE_ID_CLIENT_SECRET</span> no <span class="mono">.env</span> e rode <span class="mono">php artisan config:cache</span>.
         </div>
     @endif
 @endsection

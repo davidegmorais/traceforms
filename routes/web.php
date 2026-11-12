@@ -30,7 +30,8 @@ Route::get('/l/{code}', [PublicFormController::class, 'link'])->name('public.lin
 // ---------------------------------------------------------------------
 Route::get('/login', [AuthController::class, 'showLogin'])->middleware('guest')->name('login');
 Route::get('/auth/trace', [AuthController::class, 'redirect'])->middleware('throttle:login')->name('auth.trace.redirect');
-Route::get('/auth/trace/callback', [AuthController::class, 'callback'])->middleware('throttle:login')->name('auth.trace.callback');
+Route::get('/auth/callback', [AuthController::class, 'callback'])->middleware('throttle:login')->name('auth.trace.callback');
+Route::get('/auth/trace/callback', [AuthController::class, 'callback'])->middleware('throttle:login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth', 'trace'])->group(function () {

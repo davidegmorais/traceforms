@@ -28,7 +28,7 @@ class TraceStatus extends Command
         $this->table(['ID', 'Nome', 'Conta no Trace ID', 'Formulários', 'Membros', 'Já entraram pelo Trace ID', 'Situação'], $rows);
 
         if (! $trace->configured()) {
-            $this->warn('TRACEID_CLIENT_ID e TRACEID_CLIENT_SECRET não estão no .env: não dá para consultar o Trace ID.');
+            $this->warn('TRACE_ID_CLIENT_ID e TRACE_ID_CLIENT_SECRET não estão no .env: não dá para consultar o Trace ID.');
 
             return self::SUCCESS;
         }
