@@ -1,0 +1,142 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
+
+class ProfileController extends Controller
+{
+    public function edit(Request $request)
+    {
+        return view('profile.edit', [
+            'user' => $request->user(),
+            'accounts' => $request->user()->accounts()->get(),
+            'sessions' => config('session.driver') === 'database'
+                ? \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $request->user()->id)->orderByDesc('last_activity')->limit(10)->get()
+                : collect(),
+        ]);
+    }
+
+    public function update(Request $request)
+    {
+        $user = $request->user();
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+        ], ['email.unique' => 'Este e-mail já está em uso por outra pessoa.']);
+        $user->update(['name' => $data['name'], 'email' => strtolower($data['email'])]);
+
+        return back()->with('success', 'Dados atualizados.');
+    }
+
+    /** Recebe a foto, corta em quadrado e reduz para 320×320 (se o GD estiver disponível). */
+    public function avatar(Request $request)
+    {
+        $request->validate(['avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096']], [
+            'avatar.image' => 'Envie uma imagem (JPG, PNG ou WebP).',
+            'avatar.mimes' => 'Envie uma imagem JPG, PNG ou WebP.',
+            'avatar.max' => 'A foto deve ter até 4 MB.',
+        ]);
+        $user = $request->user();
+        $file = $request->file('avatar');
+        $path = 'avatars/'.$user->id.'-'.Str::random(8).'.jpg';
+
+        $binary = $this->squareJpeg($file->getRealPath(), 320);
+        if ($binary === null) { // sem GD: guarda o original
+            $path = 'avatars/'.$user->id.'-'.Str::random(8).'.'.$file->extension();
+            $binary = file_get_contents($file->getRealPath());
+        }
+        Storage::disk('local')->put($path, $binary);
+
+        if ($user->avatar_path) {
+            Storage::disk('local')->delete($user->avatar_path);
+        }
+        $user->update(['avatar_path' => $path]);
+
+        return back()->with('success', 'Foto atualizada.');
+    }
+
+    public function removeAvatar(Request $request)
+    {
+        $user = $request->user();
+        if ($user->avatar_path) {
+            Storage::disk('local')->delete($user->avatar_path);
+            $user->update(['avatar_path' => null]);
+        }
+
+        return back()->with('success', 'Foto removida.');
+    }
+
+    public function password(Request $request)
+    {
+        $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+        ], [
+            'current_password.current_password' => 'A senha atual está incorreta.',
+            'password.confirmed' => 'A confirmação não confere com a nova senha.',
+            'password.min' => 'A nova senha precisa ter pelo menos 8 caracteres.',
+            'password.letters' => 'A nova senha precisa ter letras.',
+            'password.numbers' => 'A nova senha precisa ter números.',
+        ]);
+        $request->user()->update(['password' => Hash::make($request->password)]);
+
+        if ($request->boolean('logout_others')) {
+            Auth::logoutOtherDevices($request->password);
+        }
+
+        return back()->with('success', 'Senha alterada.'.($request->boolean('logout_others') ? ' Você saiu dos outros dispositivos.' : ''));
+    }
+
+    public function logoutOthers(Request $request)
+    {
+        $request->validate(['password' => ['required', 'current_password']], ['password.current_password' => 'Senha incorreta.']);
+        Auth::logoutOtherDevices($request->password);
+        if (config('session.driver') === 'database') {
+            \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $request->user()->id)->where('id', '!=', $request->session()->getId())->delete();
+        }
+
+        return back()->with('success', 'Você saiu de todos os outros dispositivos.');
+    }
+
+    /** Serve a foto de um usuário (somente para usuários autenticados). */
+    public function showAvatar(User $user)
+    {
+        abort_unless($user->avatar_path && Storage::disk('local')->exists($user->avatar_path), 404);
+
+        return response()->file(Storage::disk('local')->path($user->avatar_path), [
+            'Cache-Control' => 'private, max-age=604800',
+        ]);
+    }
+
+    private function squareJpeg(string $src, int $size): ?string
+    {
+        if (! function_exists('imagecreatefromstring')) {
+            return null;
+        }
+        $img = @imagecreatefromstring(file_get_contents($src));
+        if (! $img) {
+            return null;
+        }
+        $w = imagesx($img);
+        $h = imagesy($img);
+        $side = min($w, $h);
+        $out = imagecreatetruecolor($size, $size);
+        imagefill($out, 0, 0, imagecolorallocate($out, 255, 255, 255));
+        imagecopyresampled($out, $img, 0, 0, (int) (($w - $side) / 2), (int) (($h - $side) / 2), $size, $size, $side, $side);
+        ob_start();
+        imagejpeg($out, null, 86);
+        $data = ob_get_clean();
+        imagedestroy($img);
+        imagedestroy($out);
+
+        return $data;
+    }
+}

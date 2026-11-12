@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('code', '500')
+@section('icon', 'fa-triangle-exclamation')
+@section('title', 'Algo deu errado')
+@section('message', 'Tivemos um problema inesperado. Já registramos o erro; tente novamente em instantes.')
