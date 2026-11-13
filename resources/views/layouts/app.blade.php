@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ asset('vendor/fonts/fonts.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/bulma.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=6">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=7">
     @include('partials.sidebar-state')
     @stack('head')
 </head>
@@ -84,15 +84,31 @@
             <i class="fa-solid fa-angles-left"></i><span class="lbl">Recolher menu</span>
         </button>
 
-        <div class="fp-user">
-            <a href="{{ route('profile.edit') }}" title="Meu perfil">@include('partials.avatar', ['u' => $user])</a>
-            <div class="lbl" style="min-width:0">
-                <a href="{{ route('profile.edit') }}" class="name truncate">{{ $user->name }}</a>
-                <div class="role truncate">{{ $user->email }}</div>
+        {{-- Menu da conta: Meu perfil, Trocar empresa, Trace ID e Sair (como nas outras plataformas) --}}
+        <div class="fp-user" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape="menu = false">
+            <div class="dropdown is-up" :class="{ 'is-active': menu }">
+                <div class="dropdown-trigger">
+                    <button type="button" class="fp-user-btn" @click="menu = !menu" aria-haspopup="true" :aria-expanded="menu" title="{{ $user->name }} · {{ $user->email }}">
+                        @include('partials.avatar', ['u' => $user])
+                        <span class="lbl" style="min-width:0;flex:1">
+                            <span class="name truncate">{{ $user->name }}</span>
+                            <span class="role truncate">{{ $user->email }}</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-up is-size-8 lbl fp-user-chev"></i>
+                    </button>
+                </div>
+                <div class="dropdown-menu" role="menu">
+                    <div class="dropdown-content">
+                        <a href="{{ route('profile.edit') }}" class="dropdown-item"><i class="fa-regular fa-user mr-2"></i> Meu perfil</a>
+                        <a href="{{ route('auth.trace.redirect', ['prompt' => 'select_account']) }}" class="dropdown-item"><i class="fa-solid fa-right-left mr-2"></i> Trocar empresa</a>
+                        <a href="{{ rtrim(config('traceid.issuer'), '/') }}/" class="dropdown-item"><i class="fa-regular fa-id-badge mr-2"></i> Trace ID</a>
+                        <hr class="dropdown-divider">
+                        <form method="POST" action="{{ route('logout') }}">@csrf
+                            <button type="submit" class="dropdown-item fp-user-out"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Sair</button>
+                        </form>
+                    </div>
+                </div>
             </div>
-            <form method="POST" action="{{ route('logout') }}" class="lbl">@csrf
-                <button class="button is-small" title="Sair"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-            </form>
         </div>
     </aside>
 

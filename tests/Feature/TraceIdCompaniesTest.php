@@ -70,6 +70,12 @@ class TraceIdCompaniesTest extends TestCase
         $choices = app(AccountChoices::class)->for($user);
         $this->assertSame(['Ara Growth', 'Outra Empresa'], $choices->pluck('name')->all());
         $this->assertNull($choices->firstWhere('uuid', $outra)->local, 'ainda não entrou nela, mas aparece');
+
+        // Menu da conta: Meu perfil, Trocar empresa, Trace ID e Sair
+        $this->actingAs($user)->withSession(['traceid' => ['access_token' => 'a', 'checked_at' => time()]])->get(route('dashboard'))->assertOk()
+            ->assertSee('Trocar empresa')
+            ->assertSee('href="'.self::URL.'/"', false)
+            ->assertSee('Trace ID');
     }
 
     public function test_abrir_pelo_trace_id_leva_a_empresa(): void

@@ -96,6 +96,15 @@ html:not(.sb-collapsed) .sb-collapse[data-tip]::after { display: none; }
 .fp-user > form:last-child { margin-left: auto; }
 .fp-user > a.button + form { margin-left: 0; }
 .fp-user .button:hover { color: var(--tf-ink); }
+.fp-user .dropdown, .fp-user .dropdown-trigger { width: 100%; display: block; }
+.fp-user-btn { width: 100%; display: flex; align-items: center; gap: .65rem; padding: .35rem .4rem; border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.fp-user-btn:hover, .fp-user .is-active .fp-user-btn { background: var(--tf-canvas); }
+.fp-user-btn .name, .fp-user-btn .role { display: block; }
+.fp-user-chev { color: var(--tf-muted); transition: transform .15s; }
+.fp-user .is-active .fp-user-chev { transform: rotate(180deg); }
+.fp-user .dropdown-menu { width: 100%; min-width: 220px; }
+.fp-user form { margin: 0; }
+.fp-user .dropdown-item.fp-user-out { width: 100%; border: 0; background: none; cursor: pointer; text-align: left; font: inherit; color: #c0392b; }
 .avatar { width: 32px; height: 32px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: 650; font-size: .76rem; color: #fff; background: var(--tf-ink); flex: none; }
 .avatar.is-small { width: 24px; height: 24px; font-size: .64rem; border-radius: 6px; }
 .fp-account-btn .avatar { border-radius: 7px; }
