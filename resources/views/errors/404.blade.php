@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('code', '404')
+@section('icon', 'fa-compass')
+@section('title', 'Página não encontrada')
+@section('message', 'O endereço pode estar errado ou o conteúdo foi removido.')
