@@ -1,5 +1,0 @@
-@extends('errors.layout')
-@section('code', '419')
-@section('icon', 'fa-hourglass-end')
-@section('title', 'Sessão expirada')
-@section('message', 'A página ficou aberta por muito tempo. Recarregue e tente novamente.')

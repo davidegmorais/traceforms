@@ -1,5 +1,0 @@
-@extends('errors.layout')
-@section('code', '403')
-@section('icon', 'fa-lock')
-@section('title', 'Acesso restrito')
-@section('message', isset($exception) && $exception->getMessage() && $exception->getMessage() !== 'This action is unauthorized.' ? $exception->getMessage() : 'Seu nível de acesso nesta conta não permite ver esta página. Fale com um administrador se precisar de acesso.')

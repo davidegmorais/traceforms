@@ -1,5 +1,0 @@
-@extends('errors.layout')
-@section('code', '429')
-@section('icon', 'fa-gauge-high')
-@section('title', 'Muitas tentativas')
-@section('message', 'Aguarde um instante antes de tentar de novo.')
